@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 제출 대행사에 따라 태그에 ns1: 접두사가 붙는다 -->
+<ns1:informationTable xmlns:ns1="http://www.sec.gov/edgar/document/thirteenf/informationtable">
+  <ns1:infoTable>
+    <ns1:nameOfIssuer>NVIDIA CORPORATION</ns1:nameOfIssuer>
+    <ns1:titleOfClass>COM</ns1:titleOfClass>
+    <ns1:cusip>67066G104</ns1:cusip>
+    <ns1:value>987654321</ns1:value>
+    <ns1:shrsOrPrnAmt><ns1:sshPrnamt>4321000</ns1:sshPrnamt><ns1:sshPrnamtType>SH</ns1:sshPrnamtType></ns1:shrsOrPrnAmt>
+  </ns1:infoTable>
+</ns1:informationTable>

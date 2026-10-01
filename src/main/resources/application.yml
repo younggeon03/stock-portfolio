@@ -119,3 +119,15 @@ dart:
 # 비어 있으면 미국 종목 재무를 붙이지 않고 예전처럼 클로드가 웹에서 찾는다.
 sec:
   user-agent: ${SEC_USER_AGENT:}
+
+# 기관 투자자 포트폴리오 (SEC 13F). 위의 SEC 연락처를 같이 쓴다. 없으면 배치가 조용히 건너뛴다.
+thirteenf:
+  # 기관마다 남길 분기 수. 분기 변화·여러 분기 추세에 쓴다
+  quarters: 8
+  # 매일 받는 시각 (한국 시간). 초 분 시 일 월 요일
+  sync-cron: "0 0 7 * * *"
+
+# CUSIP → 티커 변환 (OpenFIGI). 키가 없어도 동작하지만 느리다 (분당 250개 → 키가 있으면 훨씬 빠름).
+# 무료 키: https://www.openfigi.com/api
+openfigi:
+  api-key: ${OPENFIGI_API_KEY:}

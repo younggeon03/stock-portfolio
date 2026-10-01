@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 실제 13F 보유 표의 모양을 줄여 만든 것. 같은 종목이 운용역마다 여러 줄로 나뉘는 걸 재현한다 -->
+<informationTable xmlns="http://www.sec.gov/edgar/document/thirteenf/informationtable">
+  <infoTable>
+    <nameOfIssuer>APPLE INC</nameOfIssuer>
+    <titleOfClass>COM</titleOfClass>
+    <cusip>037833100</cusip>
+    <value>1000000</value>
+    <shrsOrPrnAmt><sshPrnamt>5000</sshPrnamt><sshPrnamtType>SH</sshPrnamtType></shrsOrPrnAmt>
+    <investmentDiscretion>DFND</investmentDiscretion>
+    <otherManager>4</otherManager>
+  </infoTable>
+  <infoTable>
+    <nameOfIssuer>APPLE INC</nameOfIssuer>
+    <titleOfClass>COM</titleOfClass>
+    <cusip>037833100</cusip>
+    <value>500000</value>
+    <shrsOrPrnAmt><sshPrnamt>2500</sshPrnamt><sshPrnamtType>SH</sshPrnamtType></shrsOrPrnAmt>
+    <investmentDiscretion>DFND</investmentDiscretion>
+    <otherManager>8</otherManager>
+  </infoTable>
+  <infoTable>
+    <nameOfIssuer>APPLE INC</nameOfIssuer>
+    <titleOfClass>PUT</titleOfClass>
+    <cusip>037833100</cusip>
+    <value>200000</value>
+    <shrsOrPrnAmt><sshPrnamt>1000</sshPrnamt><sshPrnamtType>SH</sshPrnamtType></shrsOrPrnAmt>
+    <putCall>Put</putCall>
+    <investmentDiscretion>SOLE</investmentDiscretion>
+  </infoTable>
+  <infoTable>
+    <nameOfIssuer>ALLY FINL INC</nameOfIssuer>
+    <titleOfClass>COM</titleOfClass>
+    <cusip>02005n100</cusip>
+    <value>1,234,567</value>
+    <shrsOrPrnAmt><sshPrnamt>12,561</sshPrnamt><sshPrnamtType>SH</sshPrnamtType></shrsOrPrnAmt>
+    <investmentDiscretion>SOLE</investmentDiscretion>
+  </infoTable>
+</informationTable>
