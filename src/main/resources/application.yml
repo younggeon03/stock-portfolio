@@ -48,10 +48,16 @@ spring:
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
+  flyway:
+    # Flyway 를 붙이기 전부터 테이블이 있던 DB(내 PC)는 V1 을 실행하지 않고 "V1 적용됨" 으로만 표시한다.
+    # 빈 DB(도커·서버)는 V1 부터 실행한다
+    baseline-on-migrate: true
+    baseline-version: 1
   jpa:
     hibernate:
-      # 개발 편의를 위해 엔티티 변경사항을 자동으로 테이블에 반영한다 (운영에서는 flyway 등으로 교체 권장)
-      ddl-auto: update
+      # 스키마는 Flyway(db/migration)가 만든다. Hibernate 는 엔티티와 테이블이 맞는지 검사만 한다.
+      # 엔티티를 고쳤는데 마이그레이션을 안 만들면 여기서 기동이 멈춘다. 그게 의도다.
+      ddl-auto: validate
     open-in-view: false
     properties:
       hibernate:
