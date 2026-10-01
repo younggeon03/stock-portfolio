@@ -115,7 +115,8 @@ docker compose up -d --build # 앱 + MySQL
 | 분석 | Anthropic Java SDK, 웹검색 도구 |
 | 외부 API | 토스증권 Open API, 나무증권 NAMUH PLUG, DART OpenAPI, SEC EDGAR |
 | 테스트 | JUnit 5, AssertJ, 86개 |
-| 빌드·배포 | Docker, GitHub Actions (푸시마다 테스트·이미지 빌드) |
+| 빌드·배포 | Docker, GitHub Actions (PR 마다 테스트·커버리지·이미지 빌드, `main` 병합 시 ghcr.io 에 이미지 게시) |
+| 운영 | Actuator 헬스체크·Prometheus 지표, Flyway 마이그레이션, 토큰 AES-GCM 암호화 |
 
 프론트엔드에 프레임워크를 쓰지 않았습니다. 화면이 표 하나와 드로어 하나뿐이라 리액트를 얹으면 빌드 설정이 앱보다 커집니다. 외부 의존성은 차트 라이브러리 하나가 전부이고, 그마저 안 불러와지면 차트만 안 뜨고 나머지는 그대로 동작합니다.
 
