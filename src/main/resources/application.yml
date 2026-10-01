@@ -1,6 +1,37 @@
 server:
   port: 8080
 
+# 운영 상태 주소. 앱 포트(8080)와 나눠 관리 포트에만 연다.
+# 서버에서는 8080 만 바깥에 열고 8081 은 안쪽(자동 배포의 헬스체크, Prometheus)에서만 부른다.
+# 지표에는 호출한 주소와 오류 수가 그대로 보여서 바깥에 내놓을 이유가 없다.
+management:
+  server:
+    port: ${MANAGEMENT_PORT:8081}
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      # 자동 배포는 "떴나(liveness)" 와 "요청을 받을 준비가 됐나(readiness, DB 포함)" 를 따로 본다
+      probes:
+        enabled: true
+      show-details: never
+      group:
+        readiness:
+          # DB 가 죽었는데 "준비됨" 이라고 하면 자동 배포가 깨진 버전을 통과시킨다
+          include: readinessState,db
+  metrics:
+    tags:
+      application: stock-portfolio
+
+# Swagger. 서버에서는 SWAGGER_ENABLED=false 로 끈다. 주소 목록이 공격 지도가 되기 때문이다.
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+
 spring.servlet.multipart:
   # 스크린샷 업로드 한도. 휴대폰 캡처가 보통 1~3MB 라 넉넉히 잡는다.
   max-file-size: 10MB
