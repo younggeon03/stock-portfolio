@@ -114,7 +114,7 @@ docker compose up -d --build # 앱 + MySQL
 | 차트 | TradingView Lightweight Charts |
 | 분석 | Anthropic Java SDK, 웹검색 도구 |
 | 외부 API | 토스증권 Open API, 나무증권 NAMUH PLUG, DART OpenAPI, SEC EDGAR |
-| 테스트 | JUnit 5, AssertJ, 77개 |
+| 테스트 | JUnit 5, AssertJ, 86개 |
 | 빌드·배포 | Docker, GitHub Actions (푸시마다 테스트·이미지 빌드) |
 
 프론트엔드에 프레임워크를 쓰지 않았습니다. 화면이 표 하나와 드로어 하나뿐이라 리액트를 얹으면 빌드 설정이 앱보다 커집니다. 외부 의존성은 차트 라이브러리 하나가 전부이고, 그마저 안 불러와지면 차트만 안 뜨고 나머지는 그대로 동작합니다.
