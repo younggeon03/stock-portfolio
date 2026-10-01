@@ -76,6 +76,22 @@
             <version>2.6.0</version>
         </dependency>
 
+        <!--
+            운영 상태를 바깥에 알리는 주소 (/actuator/health, /actuator/prometheus).
+            자동 배포가 "새 버전이 제대로 떴나" 를 판단하는 근거가 health 이고,
+            Prometheus 가 호출 수·응답 시간을 긁어가는 곳이 prometheus 다.
+            둘 다 관리 포트(8081)에만 열어 바깥에는 안 보이게 한다 (application.yml).
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

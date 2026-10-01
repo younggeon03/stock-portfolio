@@ -35,12 +35,13 @@ public class OpenApiConfig {
                         `BrokerageClient` 인터페이스에 주문 메서드를 정의하지 않았기 때문에
                         컨트롤러에서 부를 대상 자체가 없습니다.
 
-                        ## 돈이 나가는 주소는 두 개뿐입니다
+                        ## 돈이 나가는 주소는 세 개뿐입니다
 
-                        - `POST /api/analysis/{symbol}` — 1회 $0.5~2, 2~5분 걸립니다
-                        - `POST /api/import/screenshot` — 1장에 수십 원
+                        - `POST /api/analysis/{symbol}` — 1회 800~1,600원, 2~5분 걸립니다
+                        - `POST /api/import/screenshot` — 1장 약 60원
+                        - `POST /api/news/brief` — 종목당 하루 한 번, 약 5원
 
-                        나머지는 전부 0원입니다. 화면을 고치는 동안에는
+                        나머지는 전부 0원입니다. 공시 재무 미리보기(`GET /api/financials/{symbol}`)도 0원입니다. 화면을 고치는 동안에는
                         `POST /api/import/screenshot/sample` 을 쓰세요.
                         클로드를 부르지 않고 같은 모양의 가짜 결과를 돌려줍니다.
 
