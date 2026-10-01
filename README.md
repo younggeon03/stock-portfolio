@@ -83,6 +83,7 @@ SOXL을 양쪽에 나눠 들고 있었습니다. 실제로 본 숫자입니다.
 | 종목별 연환산 변동성 | 동작 확인 |
 | 종목 뉴스 목록 (구글 RSS, 무료) | 동작 확인 |
 | 공시 재무 + PER·PBR·과거 배수 (DART·SEC EDGAR, 무료) | 동작 확인 |
+| 기관 투자자 포트폴리오 수집 (국민연금·버크셔 등 10곳, SEC 13F, 매일 아침) | 수집·조회 API 동작 확인, 화면은 다음 |
 | 뉴스 인사이트 (버튼, 하루 한 번) | 파이프라인 검증됨, 크레딧 대기 |
 | 지금 더 담아도 되는지 판정 | 파이프라인 검증됨, 크레딧 대기 |
 | 스크린샷으로 보유종목 등록 | 파이프라인 검증됨, 크레딧 대기 |
@@ -114,7 +115,7 @@ docker compose up -d --build # 앱 + MySQL
 | 차트 | TradingView Lightweight Charts |
 | 분석 | Anthropic Java SDK, 웹검색 도구 |
 | 외부 API | 토스증권 Open API, 나무증권 NAMUH PLUG, DART OpenAPI, SEC EDGAR |
-| 테스트 | JUnit 5, AssertJ, 86개 |
+| 테스트 | JUnit 5, AssertJ, 97개 |
 | 빌드·배포 | Docker, GitHub Actions (PR 마다 테스트·커버리지·이미지 빌드, `main` 병합 시 ghcr.io 에 이미지 게시) |
 | 운영 | Actuator 헬스체크·Prometheus 지표, Flyway 마이그레이션, 토큰 AES-GCM 암호화 |
 
