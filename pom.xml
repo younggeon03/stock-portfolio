@@ -48,6 +48,21 @@
         </dependency>
 
         <!--
+            스키마를 SQL 파일(src/main/resources/db/migration)로 관리한다.
+            Hibernate 가 테이블을 알아서 고치게(ddl-auto: update) 두면 컬럼 삭제·이름 변경이 반영 안 되고,
+            무엇이 언제 바뀌었는지 기록도 없다. 운영 DB 는 사람이 검토한 SQL 로만 바꾼다.
+            Flyway 10 부터 MySQL 지원이 별도 모듈이라 flyway-mysql 도 필요하다.
+        -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+        </dependency>
+
+        <!--
             Claude(Anthropic) 공식 자바 SDK.
             기업분석을 클로드에게 맡길 때 쓴다. 웹검색 도구도 이 SDK 를 통해 선언한다.
         -->
