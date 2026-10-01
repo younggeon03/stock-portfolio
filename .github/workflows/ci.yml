@@ -41,6 +41,30 @@ jobs:
           path: target/surefire-reports
           retention-days: 7
 
+      # 내 PC 는 경로에 한글이 있어 JaCoCo 에이전트 경로가 깨진다. 커버리지는 여기(리눅스)서만 잰다
+      - name: 커버리지 요약
+        if: always()
+        run: |
+          csv=target/site/jacoco/jacoco.csv
+          if [ ! -f "$csv" ]; then echo "커버리지 보고서가 없습니다" >> "$GITHUB_STEP_SUMMARY"; exit 0; fi
+          {
+            echo "## 줄 커버리지"
+            echo
+            echo "| 패키지 | 커버 | 줄 |"
+            echo "|---|---:|---:|"
+            tail -n +2 "$csv" | awk -F, '{ p=$2; sub(/^com\.mystock\.portfolio\.?/, "", p); if (p=="") p="(루트)"; m[p]+=$8; c[p]+=$9; tm+=$8; tc+=$9 }
+              END { for (p in m) printf "| %s | %d%% | %d/%d |\n", p, (m[p]+c[p]) ? c[p]*100/(m[p]+c[p]) : 0, c[p], m[p]+c[p];
+                    printf "| **전체** | **%d%%** | %d/%d |\n", c_total=tc*100/(tm+tc), tc, tm+tc }' | sort
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 커버리지 보고서 보관
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: target/site/jacoco
+          retention-days: 7
+
       - name: jar 만들기
         run: ./mvnw -B -DskipTests package
 

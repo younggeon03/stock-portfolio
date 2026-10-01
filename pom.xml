@@ -121,6 +121,33 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+
+            <!--
+                테스트 커버리지. `mvnw test` 가 끝나면 target/site/jacoco/ 에 보고서가 생긴다.
+                CI 가 이 숫자를 PR 화면에 띄운다. 아직 최소 기준으로 빌드를 막지는 않는다.
+                외부 API 를 부르는 클라이언트는 일부러 테스트하지 않아서(키가 필요함) 전체 숫자는 낮게 나온다.
+                숫자 자체보다 "계산하는 코드(service, filing, dart, edgar)가 덮여 있나" 를 본다.
+            -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.12</version>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>
