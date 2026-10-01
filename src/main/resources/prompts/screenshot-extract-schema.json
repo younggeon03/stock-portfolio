@@ -1,0 +1,43 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["holdings", "note"],
+  "properties": {
+    "holdings": {
+      "type": "array",
+      "description": "스크린샷에서 읽어낸 보유 종목 목록. 한 종목도 못 읽었으면 빈 배열.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "quantity", "averagePrice", "currency", "confidence"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "종목명 또는 티커. 화면에 적힌 그대로 옮긴다. 임의로 바꾸거나 풀어쓰지 않는다."
+          },
+          "quantity": {
+            "type": "string",
+            "description": "보유 수량. 숫자만 남긴다. 콤마와 '주' 같은 글자는 빼고 소수점은 살린다. 예: 0.034888, 134. 못 읽었으면 빈 문자열."
+          },
+          "averagePrice": {
+            "type": "string",
+            "description": "매수 평균가. 숫자만 남긴다. 콤마, '원', '$' 는 빼고 소수점은 살린다. 예: 151.82, 412000. 못 읽었으면 빈 문자열."
+          },
+          "currency": {
+            "type": "string",
+            "enum": ["KRW", "USD", "UNKNOWN"],
+            "description": "가격의 통화. 원화 표시나 국내 종목이면 KRW, 달러 표시나 미국 종목이면 USD. 판단이 안 서면 UNKNOWN."
+          },
+          "confidence": {
+            "type": "integer",
+            "description": "이 줄을 얼마나 확실하게 읽었는지 0~100. 글자가 흐리거나 가려졌으면 낮게 준다."
+          }
+        }
+      }
+    },
+    "note": {
+      "type": "string",
+      "description": "사람에게 알려줄 말. 읽기 어려웠던 부분이나 주의할 점. 없으면 빈 문자열."
+    }
+  }
+}

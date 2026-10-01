@@ -1,0 +1,453 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "두 증권사를 합쳐서 보는 포트폴리오 분석기",
+    "output": "architecture.html",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1330,
+      680
+    ],
+    "repository": {
+      "url": "https://github.com/younggeon03/stock-portfolio",
+      "provider": "github",
+      "revision": "4af18c84cea27ec775e385e579478e5c216b91ce"
+    },
+    "views": [
+      {
+        "id": "holdings-path",
+        "label": "보유종목이 화면에 뜨기까지",
+        "focus": [
+          "browser",
+          "web",
+          "portfolio",
+          "brokerage",
+          "toss",
+          "tossapi"
+        ],
+        "note": "화면이 부르는 주소 하나가 세 곳을 합쳐 비중까지 계산해서 돌아온다."
+      },
+      {
+        "id": "adapter",
+        "label": "증권사를 갈아끼우는 자리",
+        "focus": [
+          "brokerage",
+          "toss",
+          "namuh",
+          "manual",
+          "mysql"
+        ],
+        "note": "BrokerageClient 를 구현하면 증권사가 늘어난다. 직접 입력도 같은 규약을 쓴다."
+      },
+      {
+        "id": "analysis",
+        "label": "기업분석",
+        "focus": [
+          "web",
+          "analysis",
+          "filing",
+          "filings",
+          "claude",
+          "mysql"
+        ],
+        "note": "과거 재무는 공시에서 받아 앱이 계산하고, 클로드는 전망만 찾는다. 돈이 나가는 건 클로드 호출뿐이다."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "filing",
+      "type": "backend",
+      "label": "공시 재무",
+      "sublabel": "최근 4분기 · PER · 과거 배수",
+      "tag": "0원",
+      "pos": [
+        660,
+        30
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/main/java/com/mystock/portfolio/external/filing/FilingService.java",
+          "label": "FilingService"
+        }
+      ]
+    },
+    {
+      "id": "filings",
+      "type": "external",
+      "label": "DART · SEC EDGAR",
+      "sublabel": "한국 · 미국 공시 원본",
+      "tag": "무료",
+      "pos": [
+        1095,
+        30
+      ],
+      "size": [
+        185,
+        62
+      ]
+    },
+    {
+      "id": "analysis",
+      "type": "backend",
+      "label": "기업분석 서비스",
+      "sublabel": "프롬프트 조립 · 캐시",
+      "tag": "스레드 1개",
+      "pos": [
+        440,
+        122
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/main/java/com/mystock/portfolio/service/analysis/CompanyAnalysisService.java",
+          "label": "CompanyAnalysisService"
+        }
+      ]
+    },
+    {
+      "id": "claude",
+      "type": "external",
+      "label": "Claude API",
+      "sublabel": "웹검색 도구 포함",
+      "tag": "유료",
+      "pos": [
+        1095,
+        122
+      ],
+      "size": [
+        185,
+        62
+      ]
+    },
+    {
+      "id": "browser",
+      "type": "frontend",
+      "label": "브라우저",
+      "sublabel": "HTML · CSS · JS",
+      "tag": "빌드 도구 없음",
+      "pos": [
+        40,
+        316
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/main/resources/static/portfolio.js",
+          "label": "화면 그리기"
+        }
+      ]
+    },
+    {
+      "id": "web",
+      "type": "backend",
+      "label": "컨트롤러",
+      "sublabel": "주소 28개 · JSON",
+      "pos": [
+        240,
+        316
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/main/java/com/mystock/portfolio/web/UnifiedPortfolioController.java",
+          "label": "UnifiedPortfolioController"
+        }
+      ]
+    },
+    {
+      "id": "portfolio",
+      "type": "backend",
+      "label": "합산 서비스",
+      "sublabel": "합치기 · 비중 · 환산",
+      "pos": [
+        440,
+        316
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/main/java/com/mystock/portfolio/service/UnifiedPortfolioService.java",
+          "label": "UnifiedPortfolioService"
+        }
+      ]
+    },
+    {
+      "id": "brokerage",
+      "type": "backend",
+      "label": "BrokerageClient",
+      "sublabel": "증권사 공통 규약",
+      "tag": "주문 메서드 없음",
+      "pos": [
+        660,
+        316
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/main/java/com/mystock/portfolio/brokerage/BrokerageClient.java",
+          "label": "인터페이스"
+        }
+      ]
+    },
+    {
+      "id": "toss",
+      "type": "backend",
+      "label": "토스 연동",
+      "sublabel": "보유종목 · 시세 · 환율",
+      "pos": [
+        880,
+        216
+      ],
+      "size": [
+        175,
+        62
+      ],
+      "sources": [
+        {
+          "path": "src/main/java/com/mystock/portfolio/external/toss/TossMarketDataService.java",
+          "label": "TossMarketDataService"
+        }
+      ]
+    },
+    {
+      "id": "namuh",
+      "type": "backend",
+      "label": "나무 연동",
+      "sublabel": "보유종목만",
+      "pos": [
+        880,
+        316
+      ],
+      "size": [
+        175,
+        62
+      ],
+      "sources": [
+        {
+          "path": "src/main/java/com/mystock/portfolio/external/namuh/NamuhApiClient.java",
+          "label": "NamuhApiClient"
+        }
+      ]
+    },
+    {
+      "id": "manual",
+      "type": "backend",
+      "label": "직접 입력",
+      "sublabel": "스크린샷으로 넣은 종목",
+      "pos": [
+        880,
+        436
+      ],
+      "size": [
+        175,
+        62
+      ],
+      "sources": [
+        {
+          "path": "src/main/java/com/mystock/portfolio/brokerage/ManualBrokerageClient.java",
+          "label": "ManualBrokerageClient"
+        }
+      ]
+    },
+    {
+      "id": "tossapi",
+      "type": "external",
+      "label": "토스증권 Open API",
+      "sublabel": "openapi.tossinvest.com",
+      "tag": "허용 IP 제한",
+      "pos": [
+        1095,
+        216
+      ],
+      "size": [
+        185,
+        62
+      ]
+    },
+    {
+      "id": "namuhapi",
+      "type": "external",
+      "label": "나무증권 NAMUH PLUG",
+      "sublabel": "api.nhplug.com:8443",
+      "pos": [
+        1095,
+        316
+      ],
+      "size": [
+        185,
+        62
+      ]
+    },
+    {
+      "id": "mysql",
+      "type": "database",
+      "label": "MySQL",
+      "sublabel": "분석 · 토큰 · 직접입력 외",
+      "tag": "테이블 6개",
+      "pos": [
+        880,
+        550
+      ],
+      "size": [
+        175,
+        64
+      ],
+      "sources": [
+        {
+          "path": "src/main/java/com/mystock/portfolio/domain/CompanyAnalysis.java",
+          "label": "CompanyAnalysis"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "내 PC · 스프링부트 :8080",
+      "wraps": [
+        "web",
+        "portfolio",
+        "analysis",
+        "filing",
+        "brokerage",
+        "toss",
+        "namuh",
+        "manual"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "browser-web",
+      "from": "browser",
+      "to": "web",
+      "label": "fetch · JSON",
+      "variant": "emphasis",
+      "labelDy": 56
+    },
+    {
+      "id": "web-portfolio",
+      "from": "web",
+      "to": "portfolio"
+    },
+    {
+      "id": "web-analysis",
+      "from": "web",
+      "to": "analysis",
+      "label": "버튼을 눌러야 실행"
+    },
+    {
+      "id": "analysis-filing",
+      "from": "analysis",
+      "to": "filing",
+      "label": "재무 먼저",
+      "labelDy": 12
+    },
+    {
+      "id": "filing-filings",
+      "from": "filing",
+      "to": "filings",
+      "label": "HTTPS",
+      "labelDy": -44
+    },
+    {
+      "id": "portfolio-brokerage",
+      "from": "portfolio",
+      "to": "brokerage",
+      "label": "구현 전부에게 요청",
+      "labelDy": 56
+    },
+    {
+      "id": "brokerage-toss",
+      "from": "brokerage",
+      "to": "toss"
+    },
+    {
+      "id": "brokerage-namuh",
+      "from": "brokerage",
+      "to": "namuh"
+    },
+    {
+      "id": "brokerage-manual",
+      "from": "brokerage",
+      "to": "manual"
+    },
+    {
+      "id": "toss-api",
+      "from": "toss",
+      "to": "tossapi",
+      "label": "HTTPS",
+      "labelDy": -44
+    },
+    {
+      "id": "namuh-api",
+      "from": "namuh",
+      "to": "namuhapi",
+      "label": "HTTPS",
+      "labelDy": -44
+    },
+    {
+      "id": "manual-db",
+      "from": "manual",
+      "to": "mysql",
+      "label": "owner_key 로 조회",
+      "labelDx": 150
+    },
+    {
+      "id": "analysis-claude",
+      "from": "analysis",
+      "to": "claude",
+      "label": "확정된 숫자 + 조사 요청"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "증권사를 갈아끼울 수 있다",
+      "items": [
+        "BrokerageClient 를 구현하고 @Component 만 붙이면 증권사가 는다",
+        "비중·변동성·차트·분석 코드는 한 줄도 안 고친다",
+        "직접 입력도 같은 규약이라 나머지 코드는 출처를 모른다"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "숫자는 앱이, 조사는 클로드가",
+      "items": [
+        "시세는 토스 한 곳에서만 받는다. 스크린샷으로 넣은 종목도 실시간이다",
+        "과거 재무는 DART·SEC 공시 원본에서, PER 은 결산일 토스 종가로 앱이 잰다",
+        "클로드는 컨센서스·뉴스처럼 웹에만 있는 것만 찾는다"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "안전장치",
+      "items": [
+        "주문 메서드를 인터페이스에 정의하지 않았다. 부를 대상이 없다",
+        "돈이 나가는 경로는 Claude 호출 하나뿐이고 버튼을 눌러야 실행된다",
+        "토큰도 MySQL 에 저장된다. 배포하려면 암호화가 먼저다"
+      ]
+    }
+  ]
+}

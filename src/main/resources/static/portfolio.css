@@ -1,0 +1,955 @@
+/*
+ * 포트폴리오 화면 스타일.
+ *
+ * ── 이 화면의 규칙 넷 ──
+ *
+ * 1. 색은 두 개뿐이다. 빨강은 오름, 파랑은 내림.
+ *    버튼이나 장식에는 색을 쓰지 않는다. 그래야 숫자의 색이 눈에 들어온다.
+ *    강조가 필요한 버튼은 검정(어두운 화면에서는 흰색)으로 채운다.
+ *
+ * 2. 상자를 만들지 않는다.
+ *    카드에 둥근 모서리와 그림자를 둘러 늘어놓는 건 어느 서비스에나 있는 기본값이다.
+ *    흰 바탕 위에 선과 여백으로만 구분한다. 상자로 뜨는 건 실제로 떠 있는 것뿐이다.
+ *    (드로어, 모달, 끌어다 놓기 안내)
+ *
+ * 3. 비중이 주인공이다.
+ *    이 앱을 만든 이유가 "한 종목이 자산의 81%였다" 를 발견한 것이었다.
+ *    스트립과 표는 서로 연결돼 있다. 한쪽에 마우스를 올리면 다른 쪽이 켜진다.
+ *
+ * 4. 숫자는 자릿수가 맞아야 읽힌다.
+ *    tabular-nums 로 세로 줄을 세운다. Pretendard 가 이걸 제대로 지원한다.
+ */
+
+/* ══════════ 토큰 ══════════ */
+
+:root {
+    color-scheme: light dark;
+
+    /* 바탕과 글자 */
+    --bg: #ffffff;
+    --bg-sunken: #f4f6f8;      /* 머리글, 호버, 막대 바닥 */
+    --bg-raised: #ffffff;      /* 실제로 떠 있는 것 */
+    --ink: #0f1216;
+    --ink-2: #1c2128;          /* 본문. 한글은 획이 많아 같은 대비에서도 흐리게 보인다. 거의 검정이다 */
+    --ink-3: #6b7480;          /* 라벨, 단위, 꺼진 값. 흰 바탕에서 4.5:1 을 넘겨야 한다 */
+    --rule: #e9ebef;           /* 줄 사이 */
+    --rule-2: #d6dae0;         /* 구역 사이 */
+
+    /* ★ 데이터 색. 이 둘은 항상 등락만 뜻한다 */
+    --rise: #e03131;
+    --fall: #1b64da;
+    --rise-soft: #fdecec;
+    --fall-soft: #eaf1fd;
+
+    /* 비중 스트립. 색이 아니라 명도로 순위를 보인다 */
+    --seg-1: #14181d;
+    --seg-2: #313842;
+    --seg-3: #4c5563;
+    --seg-4: #6b7482;
+    --seg-5: #8d95a1;
+    --seg-6: #b0b7c0;
+    --seg-7: #ccd1d8;
+
+    /* 알림 */
+    --warn-bg: #fff8e8;  --warn-line: #f3dfae;  --warn-ink: #7a5600;
+    --bad-bg: #fdeeee;   --bad-line: #f2c9c9;   --bad-ink: #b32626;
+    --ok-bg: #edf8f1;    --ok-line: #bae0c8;    --ok-ink: #22703a;
+
+    /* 모서리. 세 단계뿐이다. 전부 같은 값을 쓰면 위계가 사라진다 */
+    --r-1: 6px;    /* 버튼, 입력칸 */
+    --r-2: 10px;   /* 작은 덩어리 */
+    --r-3: 16px;   /* 떠 있는 판 */
+
+    /* 간격. 4의 배수로만 움직인다 */
+    --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px;
+    --s-5: 24px; --s-6: 32px; --s-7: 48px;
+
+    --shadow-float: 0 12px 32px -8px rgba(15, 18, 22, 0.18), 0 2px 8px -2px rgba(15, 18, 22, 0.08);
+    --shadow-side: -16px 0 48px -16px rgba(15, 18, 22, 0.16);
+    --shadow-up: 0 -12px 40px -12px rgba(15, 18, 22, 0.2);
+
+    --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+    --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+    --fast: 0.14s;
+
+    /*
+     * 읽는 면의 글자 크기.
+     *
+     * ★ 표와 본문은 밀도가 정반대여야 한다.
+     * 표는 숫자를 훑는 곳이라 조밀한 게 맞다. 분석 패널은 문장을 읽는 곳이다.
+     * 한글은 같은 크기의 로마자보다 획이 많아 12.5px 로는 문장이 안 읽힌다. 하한이 15px 이다.
+     */
+    --read: 15px;          /* 본문 */
+    --read-sm: 13px;       /* 각주, 출처, 면책 */
+    --read-lead: 1.9;      /* 한글은 줄 사이가 넉넉해야 다음 줄을 찾기 쉽다 */
+
+    /*
+     * 한 줄에 들어갈 글자 수의 상한.
+     * 한글은 35~45자가 편하다. 드로어를 넓게 끌어도 문장이 그 이상 늘어나면 안 된다.
+     * 42자 x 15px = 630px.
+     */
+    --measure: 630px;
+
+    /* 표 한 줄 높이. 여기서 다섯 줄만 보이게 계산한다 */
+    --row-h: 44px;
+    --rows-visible: 5;
+
+    /* 드로어 크기. 드래그하면 JS 가 바꾼다 */
+    --drawer-w: 50vw;
+    --drawer-h: 88vh;
+}
+
+/*
+ * 어두운 화면.
+ * ★ 등락 색을 그대로 쓰면 안 된다. #e03131 은 어두운 바탕에서 탁하게 죽는다.
+ * 밝기를 올려 같은 "빨강/파랑" 으로 읽히게 맞춘다.
+ */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #0f1114;
+        --bg-sunken: #171a1f;
+        --bg-raised: #191d22;
+        --ink: #e8eaed;
+        --ink-2: #dde3ea;
+        --ink-3: #939ca8;
+        --rule: #24282e;
+        --rule-2: #333941;
+
+        --rise: #ff6b6b;
+        --fall: #74a8ff;
+        --rise-soft: #2a1a1c;
+        --fall-soft: #16233a;
+
+        --seg-1: #e8eaed;
+        --seg-2: #b9bfc7;
+        --seg-3: #929aa4;
+        --seg-4: #737b86;
+        --seg-5: #59616b;
+        --seg-6: #434a53;
+        --seg-7: #333940;
+
+        --warn-bg: #2a2314;  --warn-line: #574722;  --warn-ink: #e8c877;
+        --bad-bg: #2a1718;   --bad-line: #57282a;   --bad-ink: #ff9b9b;
+        --ok-bg: #14261a;    --ok-line: #2a4d34;    --ok-ink: #7fd39a;
+
+        --shadow-float: 0 12px 32px -8px rgba(0, 0, 0, 0.6), 0 2px 8px -2px rgba(0, 0, 0, 0.4);
+        --shadow-side: -16px 0 48px -16px rgba(0, 0, 0, 0.55);
+        --shadow-up: 0 -12px 40px -12px rgba(0, 0, 0, 0.6);
+    }
+}
+
+/* ══════════ 바탕 ══════════ */
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Pretendard, "Pretendard Variable", -apple-system, BlinkMacSystemFont,
+                 "Apple SD Gothic Neo", "Segoe UI", "Malgun Gothic", sans-serif;
+    font-size: 13px;
+    line-height: 1.55;
+    letter-spacing: -0.005em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* 숫자는 전부 자릿수를 맞춘다 */
+td, th, table, .hero-total, .hero-sub, .bar-text, .num, .alloc-legend {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+}
+
+.wrap {
+    max-width: 1180px; margin: 0 auto; padding: var(--s-6) var(--s-5) var(--s-7);
+    transition: max-width 0.42s var(--ease-out), margin 0.42s var(--ease-out);
+}
+
+/* 키보드로 옮겨 다닐 때 어디 있는지 항상 보인다 */
+:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+    border-radius: var(--r-1);
+}
+
+/* ══════════ 버튼 ══════════ */
+
+button {
+    font: inherit; font-size: 12.5px; font-weight: 500;
+    padding: 7px 13px;
+    border: 1px solid var(--rule-2);
+    border-radius: var(--r-1);
+    background: var(--bg);
+    color: var(--ink-2);
+    cursor: pointer;
+    transition: background var(--fast), border-color var(--fast), color var(--fast), transform 0.08s;
+}
+button:hover { background: var(--bg-sunken); color: var(--ink); border-color: var(--ink-3); }
+button:active { transform: scale(0.97); }
+button:disabled { opacity: 0.4; cursor: default; transform: none; }
+
+/* 강조는 색이 아니라 명도로. 빨강·파랑은 등락 전용이다 */
+button.primary {
+    background: var(--ink); border-color: var(--ink); color: var(--bg); font-weight: 600;
+}
+button.primary:hover { background: var(--ink); color: var(--bg); opacity: 0.88; }
+
+a { color: var(--ink-2); text-underline-offset: 2px; }
+
+/* ══════════ 머리말 ══════════ */
+
+.topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--s-4); flex-wrap: wrap;
+    padding-bottom: var(--s-4); margin-bottom: var(--s-5);
+    border-bottom: 1px solid var(--rule);
+}
+.topbar h1 {
+    font-size: 15px; font-weight: 700; margin: 0 0 1px; letter-spacing: -0.02em;
+}
+.topbar .sub { font-size: 11.5px; color: var(--ink-3); margin: 0; }
+.topbar-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+/* 범위 전환은 한 덩어리로 묶어 세그먼트처럼 보이게 한다 */
+.topbar-actions .scope { border-radius: 0; margin-left: -1px; }
+.topbar-actions .scope:first-of-type { border-radius: var(--r-1) 0 0 var(--r-1); margin-left: 0; }
+.topbar-actions .scope:nth-of-type(3) { border-radius: 0 var(--r-1) var(--r-1) 0; margin-right: var(--s-2); }
+.topbar-actions .scope.primary { position: relative; z-index: 1; }
+
+/* ══════════ 총자산 ══════════ */
+
+.hero { margin-bottom: var(--s-5); }
+.hero-total {
+    font-size: 44px; font-weight: 700; letter-spacing: -0.035em;
+    line-height: 1.05; margin-bottom: 7px;
+}
+.hero-total .won {
+    font-size: 20px; font-weight: 600; margin-left: 3px; color: var(--ink-3);
+    letter-spacing: -0.01em;
+}
+.hero-sub {
+    font-size: 12.5px; color: var(--ink-2);
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline;
+}
+.hero-sub .sep { color: var(--rule-2); }
+
+/* ══════════ 비중 스트립 ══════════ */
+
+.alloc { margin-bottom: var(--s-5); }
+.alloc-bar {
+    display: flex; height: 40px; border-radius: var(--r-2);
+    overflow: hidden; background: var(--bg-sunken);
+}
+.alloc-seg {
+    position: relative; cursor: pointer; min-width: 3px;
+    display: flex; align-items: center; padding: 0 10px; overflow: hidden;
+    transition: width 0.55s var(--ease-out), filter var(--fast), opacity var(--fast);
+}
+.alloc-seg:nth-child(1) { background: var(--seg-1); }
+.alloc-seg:nth-child(2) { background: var(--seg-2); }
+.alloc-seg:nth-child(3) { background: var(--seg-3); }
+.alloc-seg:nth-child(4) { background: var(--seg-4); }
+.alloc-seg:nth-child(5) { background: var(--seg-5); }
+.alloc-seg:nth-child(6) { background: var(--seg-6); }
+.alloc-seg:nth-child(n+7) { background: var(--seg-7); }
+
+/* 가장 큰 덩어리에는 이름을 안에 적는다. 그게 이 앱이 찾으라는 숫자다 */
+.alloc-seg .seg-label {
+    font-size: 11.5px; font-weight: 600; color: var(--bg);
+    white-space: nowrap; opacity: 0.95; pointer-events: none;
+}
+.alloc-seg:nth-child(n+5) .seg-label { display: none; }
+
+/* 하나를 가리키면 나머지가 물러난다. 연결을 눈으로 보여주는 장치다 */
+.alloc-bar:hover .alloc-seg { opacity: 0.45; }
+.alloc-bar .alloc-seg:hover,
+.alloc-bar .alloc-seg.lit { opacity: 1; }
+.alloc-seg.sel { box-shadow: inset 0 0 0 2px var(--bg), inset 0 0 0 3px var(--ink); }
+
+.alloc-legend {
+    display: flex; flex-wrap: wrap; gap: 3px 16px;
+    margin-top: 9px; font-size: 11.5px; color: var(--ink-2);
+}
+.alloc-legend span { white-space: nowrap; }
+.alloc-legend b { font-weight: 600; color: var(--ink); }
+.alloc-legend i { font-style: normal; color: var(--ink-3); }
+
+/* ══════════ 증권사 요약 ══════════ */
+
+.brokers {
+    display: flex; gap: var(--s-5); flex-wrap: wrap;
+    margin-bottom: var(--s-6); font-size: 11.5px; color: var(--ink-2);
+}
+.broker-chip .bname { font-weight: 600; color: var(--ink); margin-right: 5px; }
+.broker-chip.err { color: var(--bad-ink); }
+
+/* ══════════ 보유종목 표 ══════════ */
+
+.table-head {
+    display: flex; align-items: baseline; gap: var(--s-2);
+    margin-bottom: var(--s-2);
+}
+.table-head h2 { font-size: 13px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+.table-count { font-size: 11.5px; color: var(--ink-3); }
+
+/*
+ * 다섯 줄만 보이고 나머지는 스크롤.
+ * 높이를 줄 수(--rows-visible)로 계산해서 한 군데만 고치면 되게 한다.
+ */
+.table-wrap { position: relative; border-top: 1px solid var(--rule-2); }
+/*
+ * 다섯 줄 + 여섯 번째 줄이 16px 만 살짝 보이게 한다.
+ * 잘린 줄 자체가 "아래 더 있다" 는 신호다.
+ * 그림자로만 알리면 그 그림자가 다섯 번째 줄을 덮어 읽기 어려워진다.
+ */
+.table-scroll {
+    max-height: calc(var(--row-h) * var(--rows-visible) + 34px + 16px);
+    overflow-y: auto; overscroll-behavior: contain;
+    scrollbar-width: thin; scrollbar-color: var(--rule-2) transparent;
+}
+.table-scroll::-webkit-scrollbar { width: 8px; }
+.table-scroll::-webkit-scrollbar-thumb { background: var(--rule-2); border-radius: 4px; }
+.table-scroll::-webkit-scrollbar-track { background: transparent; }
+
+/*
+ * 살짝 보이는 여섯 번째 줄을 부드럽게 지운다. 끝까지 내리면 JS 가 꺼준다.
+ * 높이를 16px 로 맞춰 다섯 번째 줄에는 닿지 않게 한다.
+ */
+.scroll-fade {
+    position: absolute; left: 0; right: 8px; bottom: 0; height: 16px;
+    pointer-events: none; opacity: 1; transition: opacity 0.2s;
+    background: linear-gradient(to bottom, transparent, var(--bg) 92%);
+}
+.scroll-fade.off { opacity: 0; }
+
+table.holdings { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+
+table.holdings th {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--bg);
+    color: var(--ink-3); font-weight: 500; font-size: 11px;
+    padding: 9px 12px; text-align: right; white-space: nowrap;
+    border-bottom: 1px solid var(--rule);
+    letter-spacing: 0;
+}
+table.holdings td {
+    height: var(--row-h); padding: 0 12px; text-align: right;
+    border-bottom: 1px solid var(--rule);
+}
+table.holdings th:first-child, table.holdings td:first-child,
+table.holdings th:nth-child(2), table.holdings td:nth-child(2) { text-align: left; }
+table.holdings tbody tr:last-child td { border-bottom: none; }
+
+table.holdings tbody tr {
+    cursor: pointer;
+    transition: background var(--fast);
+}
+table.holdings tbody tr:hover { background: var(--bg-sunken); }
+/* 키보드로 줄을 옮길 때. 바깥 테두리를 두르면 표 높이가 흔들려서 안쪽에 그린다 */
+table.holdings tbody tr:focus-visible {
+    outline: none;
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 2px var(--ink);
+}
+
+/* 비중 스트립에서 가리킨 종목. 표에서 같이 켜져 "이 덩어리가 저 줄" 이 보이게 한다 */
+table.holdings tbody tr.lit {
+    background: var(--bg-sunken);
+    box-shadow: inset 2px 0 0 var(--ink-3);
+}
+
+/* 지금 보고 있는 줄. 파랑을 쓰면 "내렸다" 와 뜻이 섞이므로 왼쪽에 선을 긋는다 */
+table.holdings tbody tr.sel { background: var(--bg-sunken); box-shadow: inset 3px 0 0 var(--ink); }
+/* 바탕이 한 단계 어두워지므로 흐린 글자는 같이 진하게 해야 대비가 유지된다 */
+table.holdings tbody tr.sel :is(.code, .single, .muted, .bar-text) { color: var(--ink-2); }
+
+.name { font-weight: 600; }
+.code { color: var(--ink-3); font-size: 11px; margin-left: 5px; font-weight: 400; }
+
+.up { color: var(--rise); }
+.down { color: var(--fall); }
+.muted { color: var(--ink-3); }
+
+/* 두 곳에 나눠 들고 있으면 굵게. 이 앱이 찾으라는 상황이다 */
+.split { color: var(--ink); font-size: 10.5px; font-weight: 600; }
+.single { color: var(--ink-3); font-size: 10.5px; }
+
+.bar-cell { width: 108px; }
+.bar-bg { background: var(--bg-sunken); border-radius: 2px; height: 4px; overflow: hidden; margin-bottom: 3px; }
+.bar-fill { background: var(--ink-2); height: 100%; transition: width 0.5s var(--ease-out); }
+.bar-text { font-size: 11px; color: var(--ink-3); }
+
+.empty { text-align: center; color: var(--ink-3); padding: var(--s-7) var(--s-5); }
+
+/* ══════════ 알림 ══════════ */
+
+.msg {
+    padding: 10px 13px; border-radius: var(--r-1); margin-bottom: var(--s-4);
+    font-size: 12.5px; border: 1px solid transparent;
+}
+.msg.loading { background: var(--bg-sunken); color: var(--ink-3); }
+.msg.error { background: var(--bad-bg); border-color: var(--bad-line); color: var(--bad-ink); white-space: pre-wrap; }
+.msg.warn { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn-ink); }
+.msg.ok { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok-ink); }
+
+.footnote {
+    margin-top: var(--s-6); padding-top: var(--s-4); border-top: 1px solid var(--rule);
+    font-size: 11px; color: var(--ink-3); line-height: 1.85;
+}
+
+/* ══════════ 상세 드로어 ══════════ */
+
+/*
+ * 뒤를 덮는 막.
+ * ★ 데스크톱에서는 일부러 꺼 둔다.
+ * 드로어가 떠 있어도 표는 그대로 눌러야 한다. 종목을 옮겨가며 비교하는 게
+ * 드로어를 쓰는 이유인데, 이 막이 클릭을 먹으면 매번 닫았다 열어야 한다.
+ * 좁은 화면은 반대라서 아래 모바일 구역에서만 켜진다.
+ */
+#drawerBackdrop {
+    position: fixed; inset: 0; z-index: 800;
+    background: rgba(8, 10, 13, 0.4);
+    opacity: 0; pointer-events: none; transition: opacity 0.3s var(--ease);
+}
+
+#drawer {
+    position: fixed; z-index: 810;
+    background: var(--bg-raised);
+    display: flex; flex-direction: column;
+    /* transform 만 움직인다. width 를 애니메이션하면 매 프레임 레이아웃이 다시 계산돼 끊긴다 */
+    transition: transform 0.42s var(--ease-out);
+    top: 0; right: 0; bottom: 0;
+    width: var(--drawer-w);
+    border-left: 1px solid var(--rule);
+    box-shadow: var(--shadow-side);
+    transform: translateX(101%);
+    will-change: transform;
+}
+#drawer.on { transform: translateX(0); }
+
+/* 크기 조절 손잡이. 잡는 영역은 12px, 보이는 선은 2px */
+.drawer-resize {
+    position: absolute; z-index: 2;
+    left: 0; top: 0; bottom: 0; width: 12px;
+    cursor: col-resize; touch-action: none;
+}
+.drawer-resize::before {
+    content: ""; position: absolute; left: 5px; top: 0; bottom: 0; width: 2px;
+    background: var(--ink); opacity: 0; transition: opacity var(--fast);
+}
+.drawer-resize:hover::before { opacity: 0.22; }
+body.resizing .drawer-resize::before { opacity: 0.55; }
+
+/* 끄는 동안에는 전환을 끈다. 안 끄면 손가락을 늦게 따라와 고무줄처럼 늘어진다 */
+body.resizing #drawer, body.resizing .wrap { transition: none; }
+body.resizing { user-select: none; cursor: col-resize; }
+
+.drawer-head {
+    padding: var(--s-5) var(--s-5) 0; display: flex; align-items: flex-start;
+    justify-content: space-between; gap: var(--s-3);
+}
+.drawer-title { font-size: 17px; font-weight: 700; letter-spacing: -0.025em; margin: 0 0 2px; }
+.drawer-meta { font-size: 11.5px; color: var(--ink-3); }
+.drawer-price { font-size: 15px; font-weight: 600; margin-top: 6px; letter-spacing: -0.01em; }
+.drawer-close {
+    border: none; background: none; font-size: 20px; line-height: 1;
+    color: var(--ink-3); padding: 2px 5px; border-radius: var(--r-1);
+    min-width: 44px; min-height: 44px;   /* 손가락으로 누를 수 있는 최소 크기 */
+}
+.drawer-close:hover { background: var(--bg-sunken); color: var(--ink); }
+
+.drawer-grip { display: none; }
+
+.drawer-tabs {
+    display: flex; padding: var(--s-4) var(--s-5) 0;
+    border-bottom: 1px solid var(--rule); gap: var(--s-5);
+}
+.drawer-tabs button {
+    border: none; background: none; border-radius: 0; padding: 8px 11px; margin: 0 -11px;
+    font-size: 12.5px; color: var(--ink-3); border-bottom: 2px solid transparent;
+    margin-bottom: -1px; transition: color var(--fast), border-color var(--fast);
+}
+.drawer-tabs button:hover { background: none; color: var(--ink); }
+.drawer-tabs button.on { color: var(--ink); font-weight: 600; border-bottom-color: var(--ink); }
+
+.drawer-body { flex: 1; overflow-y: auto; padding: var(--s-5) var(--s-5) var(--s-7); }
+.tab-pane { display: none; }
+.tab-pane.on { display: block; animation: fade-in 0.2s var(--ease); }
+
+/*
+ * 차트 패널만 드로어 높이를 따라간다.
+ * 340px 로 고정해 두면 드로어를 세로로 끌어 키워도 차트 아래가 빈 채로 남는다.
+ * 나머지 패널은 글이라 내용 높이대로 두는 게 맞다.
+ */
+.tab-pane[data-pane="chart"].on {
+    display: flex; flex-direction: column; height: 100%;
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* ══════════ 차트 ══════════ */
+
+/* 남는 높이를 전부 가져간다. 짧아도 280px 아래로는 안 내려간다 */
+#chartHost { width: 100%; flex: 1; min-height: 280px; }
+.chart-legend { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: var(--s-3); flex: none; }
+.chart-legend button {
+    font-size: 12.5px; padding: 5px 11px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 6px;
+}
+.chart-legend button .dot { width: 12px; height: 3px; border-radius: 2px; }
+.chart-legend button.off { opacity: 0.35; }
+.chart-sub { font-size: 13px; color: var(--ink-2); margin-top: var(--s-3); flex: none; }
+/* 끌면 더 나온다는 안내. 본문이 아니라 거들기라 한 단계 낮춘다 */
+.chart-hint { display: block; margin-top: 4px; font-size: 12px; color: var(--ink-3); }
+
+/* ══════════ 뉴스 ══════════ */
+
+/*
+ * 뉴스 요약. 목록 위에 붙는다.
+ * 색을 쓰지 않는다. 등락이 아닌 것에 빨강·파랑을 쓰면 뜻이 섞인다.
+ */
+.news-brief {
+    background: var(--bg-sunken);
+    border-left: 3px solid var(--ink);
+    border-radius: 0 var(--r-2) var(--r-2) 0;
+    padding: var(--s-4);
+    margin-bottom: var(--s-4);
+}
+.nb-label { font-size: 12px; color: var(--ink-3); margin-bottom: 6px; }
+.nb-headline {
+    font-size: 20px; font-weight: 700; line-height: 1.4;
+    letter-spacing: -0.025em; margin-bottom: var(--s-3); max-width: var(--measure);
+}
+.nb-detail { font-size: var(--read); line-height: var(--read-lead); color: var(--ink-2); max-width: var(--measure); }
+.nb-impact {
+    font-size: var(--read); line-height: var(--read-lead); color: var(--ink-2);
+    margin-top: var(--s-4); padding-top: var(--s-4); border-top: 1px solid var(--rule);
+    max-width: var(--measure);
+}
+.nb-impact span {
+    display: inline-block; font-size: 12px; font-weight: 600; color: var(--ink);
+    border: 1px solid var(--rule-2); border-radius: 999px;
+    padding: 1px 7px; margin-right: 6px; vertical-align: 1px;
+}
+.nb-note { font-size: 12px; color: var(--ink-3); margin-top: var(--s-3); }
+
+.news-item { padding: var(--s-3) 0; border-bottom: 1px solid var(--rule); }
+.news-item:last-child { border-bottom: none; }
+.news-item a {
+    color: var(--ink); text-decoration: none; display: block;
+    font-size: var(--read); line-height: 1.6; max-width: var(--measure);
+}
+.news-item a:hover { text-decoration: underline; }
+.news-item .date { font-size: 12px; color: var(--ink-3); margin-top: 3px; }
+.news-empty { font-size: var(--read); color: var(--ink-3); padding: var(--s-6) 0; text-align: center; }
+
+/* ══════════ 기업분석 ══════════ */
+
+.analysis-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--s-3); flex-wrap: wrap; margin-bottom: var(--s-4);
+}
+.analysis-meta { font-size: 12px; color: var(--ink-3); }
+
+/* ══════════ 판정 ══════════ */
+
+/*
+ * 기업분석 탭에서 제일 먼저 읽히는 블록.
+ * 색은 여기서도 등락 규칙을 따른다. 더 담아도 되면 빨강, 줄일 상태면 파랑.
+ * 한국 증시에서 빨강이 오름이라 "늘리는 쪽" 과 뜻이 맞는다.
+ * 판단 보류는 회색이다. 모른다는 걸 색으로 꾸미지 않는다.
+ */
+.verdict {
+    border-left: 3px solid var(--ink-3);
+    padding: var(--s-4) var(--s-4) var(--s-4) var(--s-4);
+    margin-bottom: var(--s-5);
+    background: var(--bg-sunken);
+    border-radius: 0 var(--r-2) var(--r-2) 0;
+}
+.verdict.up    { border-left-color: var(--rise); background: var(--rise-soft); }
+.verdict.down  { border-left-color: var(--fall); background: var(--fall-soft); }
+.verdict.flat  { border-left-color: var(--ink); }
+.verdict.muted { border-left-color: var(--ink-3); }
+
+.v-stance {
+    font-size: 12px; font-weight: 600; letter-spacing: 0;
+    display: flex; align-items: center; gap: 5px; margin-bottom: 5px;
+    color: var(--ink-2);
+}
+.verdict.up .v-stance   { color: var(--rise); }
+.verdict.down .v-stance { color: var(--fall); }
+.v-mark { font-size: 9px; }
+
+.v-headline {
+    font-size: 23px; font-weight: 700; letter-spacing: -0.03em;
+    line-height: 1.35; margin-bottom: var(--s-3);
+}
+
+.v-reason {
+    font-size: var(--read); line-height: var(--read-lead); color: var(--ink-2);
+    max-width: var(--measure);
+}
+
+.v-basis { display: flex; flex-wrap: wrap; gap: 5px; margin-top: var(--s-3); }
+/* 가라앉은 바탕 위라 --ink-3 로는 4.37:1 밖에 안 나온다. 한 단계 진한 색을 쓴다 */
+.basis {
+    font-size: 12px; color: var(--ink-2);
+    border: 1px solid var(--rule-2); border-radius: 999px; padding: 2px 8px;
+}
+
+.summary-line {
+    font-size: 17px; font-weight: 600; line-height: 1.7; color: var(--ink);
+    padding-bottom: var(--s-5); border-bottom: 1px solid var(--rule);
+    letter-spacing: -0.015em; max-width: var(--measure);
+}
+
+.sec { padding: var(--s-7) 0; border-bottom: 1px solid var(--rule-2); }
+.sec:last-of-type { border-bottom: none; }
+/*
+ * 섹션 제목.
+ *
+ * ★ 본문과 두 단계를 벌린다.
+ * 15px 제목에 15px 본문이면 눈이 구역 경계를 못 찾아 전체가 한 덩어리로 보인다.
+ * 크기(19px)와 굵기(700)와 색(--ink)을 한꺼번에 올려 제목만 훑어도 목차가 되게 한다.
+ */
+.sec h3 {
+    font-size: 19px; font-weight: 700; margin: 0 0 var(--s-3); color: var(--ink);
+    display: flex; align-items: baseline; gap: var(--s-2);
+    letter-spacing: -0.02em; line-height: 1.35;
+}
+.sec.na h3, .sec.na .body { color: var(--ink-3); }
+.sec .na-badge { font-size: 12px; font-weight: 400; color: var(--ink-3); }
+/*
+ * 본문.
+ *
+ * ★ 덩어리를 깨는 장치가 둘 있다 (portfolio.js 의 prose() 가 붙인다).
+ * .lead — 문단의 첫 문장. 대개 결론이라 이것만 읽고 넘어가도 뜻이 통해야 한다.
+ * .num  — 단위가 붙은 숫자. 이 화면에서 실제로 찾는 건 숫자다.
+ *
+ * 둘 다 색과 굵기만 바꾸고 크기는 건드리지 않는다. 크기까지 흔들면 줄 간격이 들쭉날쭉해진다.
+ */
+.sec .body {
+    font-size: var(--read); line-height: var(--read-lead);
+    white-space: pre-wrap; color: var(--ink-2); max-width: var(--measure);
+}
+
+.lead { color: var(--ink); font-weight: 600; }
+
+/* 숫자는 자릿수가 세로로 맞아야 눈이 크기를 가늠한다 */
+b.num {
+    color: var(--ink); font-weight: 700;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.sec ul {
+    margin: var(--s-4) 0 0; padding-left: var(--s-5);
+    font-size: var(--read); line-height: 1.8; color: var(--ink-2); max-width: var(--measure);
+}
+.sec li { margin-bottom: var(--s-2); padding-left: 3px; }
+.sec li::marker { color: var(--ink-2); }
+
+/* 평단가 비교는 이 분석의 결론이라 따로 세운다 */
+.sec.position {
+    border-left: 2px solid var(--ink); padding-left: var(--s-4);
+    background: var(--bg-sunken); border-radius: 0 var(--r-2) var(--r-2) 0;
+    margin-top: var(--s-2); padding-right: var(--s-4);
+}
+
+/* 지표 표. 기간이 열이라 옆으로 넓어질 수 있으니 안에서만 가로 스크롤된다 */
+.metric-box { margin-top: var(--s-4); overflow-x: auto; }
+
+.period-toggle { display: flex; gap: 3px; margin-bottom: var(--s-2); }
+.period-toggle button { font-size: 12px; padding: 4px 12px; border-radius: 999px; }
+.period-toggle button.on {
+    background: var(--ink); border-color: var(--ink); color: var(--bg); font-weight: 600;
+}
+
+/*
+ * 지표 표.
+ *
+ * ★ 본문과 같은 크기로 읽는다.
+ * 이 표는 숫자를 훑는 곳이면서 동시에 "해석" 칸에서 문장을 읽는 곳이다.
+ * 12.5px 로는 해석이 안 읽혔다. 본문(15px)보다 한 단계만 작게 잡는다.
+ *
+ * 숫자는 오른쪽, 글자는 왼쪽. 소수점과 자릿수가 세로로 줄을 서야 기간끼리 비교된다.
+ */
+table.metrics { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.metrics th.num { text-align: right; white-space: nowrap; }
+table.metrics th {
+    text-align: left; font-weight: 600; color: var(--ink-2); font-size: 12.5px;
+    padding: 6px 10px; border-bottom: 1px solid var(--rule-2);
+    white-space: nowrap;
+}
+table.metrics td {
+    padding: 7px 10px; border-bottom: 1px solid var(--rule); color: var(--ink-2);
+    vertical-align: baseline; line-height: 1.5;
+}
+/* 항목 이름은 그 줄이 무엇인지라 본문색보다 진하게 */
+table.metrics td:first-child { color: var(--ink); font-weight: 600; white-space: nowrap; }
+/* 해석 칸은 문장이라 폭을 넉넉히 주고 줄바꿈을 허용한다 */
+table.metrics td:last-child, table.metrics th:last-child { width: 40%; }
+/* 숫자는 오른쪽 정렬. 열 너비를 고정해 줄마다 위치가 흔들리지 않게 한다 */
+table.metrics td.val {
+    text-align: right; font-weight: 600; color: var(--ink);
+    white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+table.metrics th.num { text-align: right; }
+table.metrics td.unknown { color: var(--ink-3); font-weight: 400; }
+/* 각주 번호는 값을 읽는 데 방해가 되면 안 된다 */
+.fn { font-size: 10px; }
+.fn { font-size: 9px; color: var(--ink-3); margin-left: 3px; vertical-align: super; }
+
+/* 시점값의 기준일. 열을 따로 두지 않고 값 아래에 작게 붙인다 */
+/*
+ * 기준일.
+ *
+ * ★ block 으로 두면 안 된다.
+ * 값이 "연 0.75%" 처럼 짧아도 기준일이 아래 줄을 차지해서 줄 높이가 두 배가 된다.
+ * 값 왼쪽에 붙여 한 줄로 만든다. 값은 오른쪽 정렬이라 숫자가 열 끝에 그대로 줄을 선다.
+ */
+.as-of {
+    font-size: 11.5px; color: var(--ink-3); font-weight: 400;
+    margin-right: var(--s-2);
+}
+
+.srcs { margin-top: var(--s-4); font-size: var(--read-sm); color: var(--ink-3); line-height: 1.9; }
+.srcs a { color: var(--ink-3); }
+
+.risk-box { margin-top: var(--s-5); padding-top: var(--s-4); border-top: 1px solid var(--rule-2); }
+/* 섹션 제목과 같은 급이다. 여기만 작으면 리스크 구역이 통째로 안 보인다 */
+.risk-box h3 { font-size: 19px; color: var(--ink); letter-spacing: -0.02em; font-weight: 700; margin: 0 0 var(--s-3); }
+.risk { padding: var(--s-4) 0; border-bottom: 1px solid var(--rule); font-size: var(--read); }
+.risk:last-child { border-bottom: none; }
+.risk .rtitle { font-weight: 700; margin-bottom: 4px; display: flex; align-items: baseline; gap: var(--s-2); }
+.risk.HIGH .rtitle { color: var(--bad-ink); }
+.risk .rsev { font-size: 11.5px; font-weight: 500; color: var(--ink-3); }
+.risk .rdetail { line-height: var(--read-lead); color: var(--ink-2); max-width: var(--measure); }
+
+.disclaimer {
+    margin-top: var(--s-5); padding-top: var(--s-3); border-top: 1px solid var(--rule);
+    font-size: var(--read-sm); color: var(--ink-3); line-height: 1.85;
+}
+
+.state { padding: var(--s-7) var(--s-4); text-align: center; font-size: var(--read); color: var(--ink-2); line-height: 1.8; }
+.state.err {
+    text-align: left; color: var(--bad-ink); background: var(--bad-bg);
+    border: 1px solid var(--bad-line); border-radius: var(--r-1);
+    padding: 13px 15px; white-space: pre-wrap;
+}
+.stale-banner, .fail-banner {
+    padding: 11px 14px; border-radius: var(--r-1); font-size: 13px;
+    margin-bottom: var(--s-4); border: 1px solid;
+}
+.stale-banner { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn-ink); }
+.fail-banner { background: var(--bad-bg); border-color: var(--bad-line); color: var(--bad-ink); white-space: pre-wrap; }
+
+.spinner {
+    width: 26px; height: 26px; margin: 0 auto var(--s-3);
+    border: 2px solid var(--rule); border-top-color: var(--ink);
+    border-radius: 50%; animation: spin 0.75s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ══════════ 스크린샷 끌어다 놓기 ══════════ */
+
+#dropZone {
+    display: none; position: fixed; inset: 0; z-index: 900;
+    background: rgba(8, 10, 13, 0.35);
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(2px);
+}
+#dropZone.on { display: flex; animation: fade-in 0.15s var(--ease); }
+.drop-inner {
+    background: var(--bg-raised); border: 2px dashed var(--ink-3); border-radius: var(--r-3);
+    padding: var(--s-7) 56px; text-align: center; pointer-events: none;
+    box-shadow: var(--shadow-float);
+}
+.drop-icon { font-size: 30px; margin-bottom: var(--s-2); }
+.drop-title { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+.drop-sub { font-size: 11.5px; color: var(--ink-3); }
+
+/* ══════════ 검수 모달 ══════════ */
+
+#shotModal {
+    display: none; position: fixed; inset: 0; z-index: 1000;
+    background: rgba(8, 10, 13, 0.5);
+    align-items: center; justify-content: center; padding: var(--s-5);
+}
+#shotModal.on { display: flex; animation: fade-in 0.15s var(--ease); }
+.modal-box {
+    background: var(--bg-raised); border-radius: var(--r-3);
+    width: 100%; max-width: 980px; max-height: 90vh;
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: var(--shadow-float);
+    animation: pop 0.22s var(--ease-out);
+}
+@keyframes pop { from { opacity: 0; transform: scale(0.985) translateY(8px); } to { opacity: 1; transform: none; } }
+.modal-head {
+    padding: var(--s-4) var(--s-5); border-bottom: 1px solid var(--rule);
+    display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+}
+.modal-head h2 { font-size: 14px; font-weight: 700; margin: 0 0 1px; }
+.modal-head .msub { font-size: 11.5px; color: var(--ink-3); }
+.modal-body { padding: var(--s-4) var(--s-5); overflow: auto; flex: 1; }
+.modal-foot {
+    padding: var(--s-3) var(--s-5); border-top: 1px solid var(--rule);
+    display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap;
+}
+.modal-foot .spacer { flex: 1; }
+.close-x {
+    border: none; background: none; font-size: 19px; color: var(--ink-3);
+    padding: 2px 5px; line-height: 1; border-radius: var(--r-1);
+}
+.close-x:hover { background: var(--bg-sunken); color: var(--ink); }
+
+table.review { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.review th {
+    color: var(--ink-3); font-weight: 500; font-size: 10.5px;
+    padding: 7px 5px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--rule);
+}
+table.review td { padding: 5px 3px; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+table.review tr.warn td { background: var(--warn-bg); }
+table.review input, table.review select {
+    width: 100%; padding: 6px 8px; font: inherit; font-size: 12px;
+    border: 1px solid var(--rule-2); border-radius: var(--r-1);
+    background: var(--bg); color: var(--ink);
+}
+table.review input:focus, table.review select:focus {
+    outline: 2px solid var(--ink); outline-offset: -1px; border-color: var(--ink);
+}
+table.review input.bad { border-color: var(--warn-line); background: var(--warn-bg); }
+table.review td.num input { text-align: right; }
+.row-issues { font-size: 10.5px; color: var(--warn-ink); margin-top: 3px; line-height: 1.45; }
+.del-row { padding: 5px 9px; font-size: 11.5px; }
+.del-row:hover { background: var(--bad-bg); border-color: var(--bad-line); color: var(--bad-ink); }
+.review-note, .review-warn {
+    padding: 10px 13px; border-radius: var(--r-1); font-size: 11.5px; margin-bottom: var(--s-3);
+}
+.review-note { background: var(--bg-sunken); color: var(--ink-2); }
+.review-warn { background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn-ink); }
+
+/* ══════════ 데스크톱: 드로어가 열렸을 때 ══════════ */
+
+@media (min-width: 901px) {
+    body.drawer-open .wrap {
+        max-width: none;
+        margin: 0 calc(var(--drawer-w) + var(--s-5)) 0 var(--s-5);
+    }
+
+    /*
+     * 좁아진 폭에 9열을 그대로 욱여넣으면 종목명이 넉 줄로 접힌다.
+     * 비교에 필요한 다섯 열만 남긴다: 종목 · 평가금액 · 수익률 · 비중 · 기업분석.
+     * 드로어가 열렸는지가 아니라 남은 폭을 기준으로 한다. JS 가 재서 붙인다.
+     */
+    body.wrap-narrow table.holdings :is(th, td):nth-child(2),
+    body.wrap-narrow table.holdings :is(th, td):nth-child(3),
+    body.wrap-narrow table.holdings :is(th, td):nth-child(4),
+    body.wrap-narrow table.holdings :is(th, td):nth-child(7) { display: none; }
+}
+
+/* ══════════ 모바일 ══════════ */
+
+@media (max-width: 900px) {
+    #drawerBackdrop.on { opacity: 1; pointer-events: auto; }
+
+    #drawer {
+        top: auto; left: 0; right: 0; bottom: 0;
+        width: 100%; height: var(--drawer-h);
+        border-left: none; border-top: 1px solid var(--rule);
+        border-radius: var(--r-3) var(--r-3) 0 0;
+        box-shadow: var(--shadow-up);
+        transform: translateY(101%);
+    }
+    #drawer.on { transform: translateY(0); }
+
+    .drawer-resize {
+        left: 0; right: 0; top: 0; bottom: auto;
+        width: auto; height: 22px; cursor: row-resize;
+    }
+    .drawer-resize::before { display: none; }
+    body.resizing { cursor: row-resize; }
+
+    .drawer-grip {
+        display: block; width: 36px; height: 4px; border-radius: 2px;
+        background: var(--rule-2); margin: 9px auto 0;
+        transition: background var(--fast), width var(--fast);
+    }
+    body.resizing .drawer-grip { background: var(--ink-2); width: 52px; }
+
+    .drawer-head { padding: 6px var(--s-4) 0; }
+    .drawer-body { padding: var(--s-4) var(--s-4) var(--s-7); }
+    .drawer-tabs { padding: var(--s-3) var(--s-4) 0; }
+    #chartHost { height: 280px; }
+}
+
+@media (max-width: 700px) {
+    .wrap { padding: var(--s-5) var(--s-4) var(--s-6); }
+    .hero-total { font-size: 34px; }
+    .alloc-bar { height: 32px; }
+
+    /* 표를 카드로 바꾼다. DOM 은 그대로 두고 보이는 방식만 바꾼다 */
+    .table-wrap { border-top: none; }
+    .table-scroll { max-height: none; overflow: visible; }
+    .scroll-fade { display: none; }
+
+    table.holdings thead { display: none; }
+    table.holdings, table.holdings tbody, table.holdings tr, table.holdings td { display: block; width: 100%; }
+    table.holdings tr {
+        border: 1px solid var(--rule); border-radius: var(--r-2);
+        padding: 13px 15px; margin-bottom: 8px;
+        display: flex; flex-direction: column;
+    }
+    /*
+     * 카드 안에서는 중요한 순서대로 다시 세운다.
+     * 가로로 볼 때 맞는 열 순서가 카드에서도 맞는 건 아니다.
+     */
+    table.holdings td:nth-child(1) { order: 1; }   /* 종목 */
+    table.holdings td:nth-child(5) { order: 2; }   /* 평가금액 */
+    table.holdings td:nth-child(6) { order: 3; }   /* 수익률 */
+    table.holdings td:nth-child(8) { order: 4; }   /* 비중 */
+    table.holdings td:nth-child(3) { order: 5; }   /* 수량 */
+    table.holdings td:nth-child(4) { order: 6; }   /* 현재가 */
+    table.holdings td:nth-child(7) { order: 7; }   /* 변동성 */
+    table.holdings td:nth-child(2) { order: 8; }   /* 보유처 */
+    table.holdings td:nth-child(9) { order: 9; }   /* 기업분석 */
+
+    table.holdings tbody tr:hover, table.holdings tbody tr.lit { background: transparent; }
+    table.holdings tbody tr.sel { background: transparent; border-color: var(--ink); box-shadow: none; }
+
+    table.holdings td {
+        height: auto; padding: 3px 0; border-bottom: none; text-align: right;
+        display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-3);
+    }
+    table.holdings td::before {
+        content: attr(data-label);
+        color: var(--ink-3); font-size: 11px; font-weight: 500; text-align: left; flex: none;
+    }
+    table.holdings td:first-child { display: block; text-align: left; padding-bottom: 7px; }
+    table.holdings td:first-child::before { display: none; }
+    table.holdings td[data-label="평가금액"] {
+        font-size: 19px; font-weight: 700; letter-spacing: -0.025em;
+        padding: 2px 0 7px; border-bottom: 1px solid var(--rule); margin-bottom: 5px;
+    }
+    table.holdings td.bar-cell { width: auto; display: block; padding-top: 7px; }
+    table.holdings td.bar-cell::before { display: none; }
+
+    .brokers { gap: var(--s-3); }
+    .modal-box { max-height: 94vh; }
+    .modal-body { padding: var(--s-3) var(--s-4); }
+}
+
+/* 터치 기기에서는 손가락 크기를 맞춘다 */
+@media (hover: none) {
+    button { min-height: 44px; }
+    .drawer-tabs button { min-height: 44px; }
+    table.holdings tbody tr:hover { background: transparent; }
+    .alloc-bar:hover .alloc-seg { opacity: 1; }
+}
+
+/* 움직임을 줄여달라고 설정한 사람에게는 애니메이션을 끈다 */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

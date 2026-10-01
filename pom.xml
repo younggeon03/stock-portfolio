@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.3.5</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.mystock</groupId>
+    <artifactId>portfolio</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>portfolio</name>
+    <description>토스증권 Open API 기반 개인 포트폴리오 분석/리밸런싱 웹앱</description>
+
+    <properties>
+        <java.version>21</java.version>
+    </properties>
+
+    <dependencies>
+        <!-- REST 컨트롤러 + 내장 톰캣 + RestClient(HTTP 클라이언트) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- JPA(Hibernate) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- @Valid, @NotBlank 등 입력값 검증 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- MySQL 드라이버 -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!--
+            Claude(Anthropic) 공식 자바 SDK.
+            기업분석을 클로드에게 맡길 때 쓴다. 웹검색 도구도 이 SDK 를 통해 선언한다.
+        -->
+        <dependency>
+            <groupId>com.anthropic</groupId>
+            <artifactId>anthropic-java</artifactId>
+            <version>2.62.0</version>
+        </dependency>
+
+        <!--
+            API 문서 자동 생성 (springdoc-openapi).
+
+            컨트롤러를 읽어 주소·파라미터·응답 형태를 스스로 만들어낸다.
+            손으로 쓴 API 문서는 코드를 고칠 때마다 같이 안 고쳐져서 결국 거짓말을 시작한다.
+            그래서 목록은 여기에 맡기고, 사람이 쓴 docs/아키텍처.md 7장(API 계약)에는
+            코드만 봐서는 알 수 없는 것(비용, 헤더의 의미, 없는 기능)만 남겼다.
+
+            ※ 버전을 올리지 마세요. 2.6.0 이 Spring Boot 3.3 에 맞는 마지막 버전입니다.
+              2.7 이상은 Spring Framework 6.2 (Boot 3.4) 의 LiteWebJarsResourceResolver 를 찾기 때문에
+              기동 중에 NoClassDefFoundError 로 죽습니다. 실제로 2.8.17 로 올렸다가 겪었습니다.
+              올리려면 Spring Boot 부터 올려야 합니다.
+        -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.6.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -1,0 +1,265 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "symbol",
+    "name",
+    "instrumentType",
+    "oneLineSummary",
+    "verdict",
+    "sections",
+    "risks"
+  ],
+  "properties": {
+    "symbol": {
+      "type": "string",
+      "description": "입력받은 종목코드를 그대로 적는다."
+    },
+    "name": {
+      "type": "string",
+      "description": "정식 종목명. 한국어 이름이 있으면 한국어로."
+    },
+    "instrumentType": {
+      "type": "string",
+      "enum": [
+        "STOCK",
+        "ETF",
+        "UNKNOWN"
+      ],
+      "description": "개별 기업 주식이면 STOCK, ETF/ETN/레버리지 상품이면 ETF, 확실하지 않으면 UNKNOWN. 입력의 종목유형을 따른다."
+    },
+    "oneLineSummary": {
+      "type": "string",
+      "description": "80자 이내 한 문장 요약. 매수/매도/보유/추천 같은 투자 판단 단어를 쓰지 않는다."
+    },
+    "verdict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stance",
+        "headline",
+        "reason",
+        "basis"
+      ],
+      "description": "이 사람의 보유 상태를 전제로 한 판정. 종목 자체에 대한 일반 의견이 아니다. 같은 종목이라도 비중과 평단가가 다르면 다른 판정이 나와야 한다.",
+      "properties": {
+        "stance": {
+          "type": "string",
+          "enum": [
+            "ADD",
+            "HOLD",
+            "TRIM",
+            "EXIT",
+            "UNCLEAR"
+          ],
+          "description": "ADD 더 담아도 되는 상태 / HOLD 그대로 두는 상태 / TRIM 비중을 줄일 상태 / EXIT 정리를 검토할 상태 / UNCLEAR 근거가 모자라 판단을 보류. 근거가 약하면 억지로 고르지 말고 UNCLEAR 를 쓴다."
+        },
+        "headline": {
+          "type": "string",
+          "description": "판정을 사람 말로 옮긴 한 줄. 20자 이내. 예: 더 담지 마세요 / 그대로 두세요"
+        },
+        "reason": {
+          "type": "string",
+          "description": "왜 그 판정인지 300자 내외. 반드시 이 사람의 비중과 평단가를 근거에 포함한다. 앱이 준 숫자를 다시 계산하지 말고 그대로 인용한다."
+        },
+        "basis": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": [
+              "NEWS",
+              "VALUATION",
+              "MACRO",
+              "INDUSTRY",
+              "PRICE",
+              "CONCENTRATION"
+            ]
+          },
+          "description": "판정이 무엇에 기댔는지. 화면에 근거 종류로 표시된다."
+        }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "description": "아래 7개 key 를 이 순서대로 하나씩 담는다.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "title",
+          "applicable",
+          "notApplicableReason",
+          "body",
+          "bullets",
+          "metrics",
+          "sources"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "FINANCIAL_POSITION",
+              "VALUATION_METRICS",
+              "GUIDANCE_CONSENSUS",
+              "REVENUE_BREAKDOWN",
+              "BUSINESS_ANALYSIS",
+              "PROFIT_STRUCTURE",
+              "POSITION_REVIEW"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "description": "화면에 보일 한국어 제목."
+          },
+          "applicable": {
+            "type": "boolean",
+            "description": "이 종목에 이 섹션이 성립하면 true. ETF 라서 개별기업 지표가 없으면 false."
+          },
+          "notApplicableReason": {
+            "type": "string",
+            "description": "applicable 이 false 일 때만 한국어 이유를 쓴다. true 면 빈 문자열."
+          },
+          "body": {
+            "type": "string",
+            "description": "2~5문단 한국어 서술. 마크다운 기호(#, *, -)를 쓰지 말고 문단은 빈 줄로 나눈다. applicable 이 false 여도 대체 설명을 여기 쓸 수 있다."
+          },
+          "bullets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "핵심 포인트 3~6개. 각 1~2문장."
+          },
+          "metrics": {
+            "type": "array",
+            "description": "수치 지표. 없으면 빈 배열.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "label",
+                "note",
+                "points"
+              ],
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "description": "예: PER, ROE, 부채비율, 영업이익률"
+                },
+                "note": {
+                  "type": "string",
+                  "description": "이 숫자를 어떻게 읽어야 하는지 한 문장. 없으면 빈 문자열."
+                },
+                "points": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 8,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "period",
+                      "periodType",
+                      "value",
+                      "sourceIndex"
+                    ],
+                    "properties": {
+                      "period": {
+                        "type": "string",
+                        "description": "기간 이름. 분기는 \"2026 2분기\", 연도는 \"2025\", 시점값은 \"2026-09-10\" 처럼 적는다."
+                      },
+                      "periodType": {
+                        "type": "string",
+                        "enum": [
+                          "QUARTER",
+                          "ANNUAL",
+                          "POINT"
+                        ],
+                        "description": "QUARTER 분기 실적 / ANNUAL 연간 실적 / POINT 기간 개념이 없는 시점값(총보수, 순자산총액 등)"
+                      },
+                      "value": {
+                        "type": "string",
+                        "description": "단위를 포함한 값. 못 찾았으면 \"모름\""
+                      },
+                      "sourceIndex": {
+                        "type": "integer",
+                        "description": "같은 섹션 sources 의 인덱스. 출처가 없으면 -1"
+                      }
+                    }
+                  },
+                  "description": "같은 지표의 기간별 값. 분기는 최근 4개, 연도는 최근 3개까지 넣는다. 둘 다 찾을 수 있으면 둘 다 넣어라. 화면에서 분기/연도를 전환해 본다."
+                }
+              }
+            }
+          },
+          "sources": {
+            "type": "array",
+            "description": "이 섹션의 근거 출처. 웹검색에 실제로 나온 것만.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "title",
+                "url",
+                "publisher",
+                "publishedAt"
+              ],
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "실제 검색 결과에 나온 URL 만. 지어내지 않는다."
+                },
+                "publisher": {
+                  "type": "string",
+                  "description": "예: DART, SEC EDGAR, 한국경제, Direxion"
+                },
+                "publishedAt": {
+                  "type": "string",
+                  "description": "YYYY-MM-DD. 모르면 모름."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "risks": {
+      "type": "array",
+      "description": "이 보유 상태에서 사용자가 실제로 감당하고 있는 리스크 2~5개.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "detail",
+          "severity"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "예: 단일 종목 집중"
+          },
+          "detail": {
+            "type": "string",
+            "description": "왜 리스크인지 2~4문장. 보유현황 블록의 숫자를 인용한다."
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "HIGH",
+              "MEDIUM",
+              "LOW"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

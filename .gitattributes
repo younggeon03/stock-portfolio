@@ -1,0 +1,5 @@
+# 리눅스(도커, GitHub Actions)에서 실행되는 스크립트는 윈도우에서도 LF 로 체크아웃한다.
+# CRLF 가 되면 셸이 "/bin/sh^M: bad interpreter" 로 멈춘다.
+mvnw text eol=lf
+*.sh text eol=lf
+mvnw.cmd text eol=crlf

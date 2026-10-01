@@ -1,0 +1,11 @@
+# 이미지에 들어가면 안 되는 것. 특히 .env 는 키가 들어 있어 절대 이미지에 굽지 않는다
+.env
+.git
+.github
+.idea
+*.iml
+target
+out
+docs
+*.log
+# *.md 는 빼지 않는다. src/main/resources/prompts/*.md 가 클로드 지시문이라 빠지면 분석이 깨진다

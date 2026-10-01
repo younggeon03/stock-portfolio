@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>내 포트폴리오</title>
+
+    <!--
+      메인 화면은 portfolio.html 이다.
+      이 파일은 localhost:8080 만 쳤을 때 빈 화면이 나오지 않도록 자동으로 넘겨주는 역할만 한다.
+      (스프링부트는 static 폴더의 index.html 을 루트 주소의 기본 페이지로 쓴다)
+    -->
+    <meta http-equiv="refresh" content="0; url=/portfolio.html">
+    <script>location.replace("/portfolio.html");</script>
+</head>
+<body>
+<p style="font-family: -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif; padding: 24px;">
+    포트폴리오 화면으로 이동합니다.
+    자동으로 넘어가지 않으면 <a href="/portfolio.html">여기를 눌러주세요</a>.
+</p>
+</body>
+</html>

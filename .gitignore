@@ -1,0 +1,49 @@
+### IntelliJ IDEA ###
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+.kotlin
+.idea/
+*.iml
+*.iws
+*.ipr
+
+### 개발 도구 설정 (개인 환경 값이라 공유하지 않는다) ###
+.claude/
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store
+
+### 환경변수 (토스증권 client_secret 등 민감 정보 - 절대 커밋 금지) ###
+.env
+
+### Maven ###
+target/
+
+### 로그 ###
+*.log
+# archify 가 검사하며 남기는 부산물
+docs/diagrams/*.visual-check.*
+cp.txt

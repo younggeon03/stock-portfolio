@@ -1,0 +1,65 @@
+# 푸시와 PR 마다 테스트를 돌리고 도커 이미지가 만들어지는지 확인한다.
+# 테스트는 바깥 API·DB 를 부르지 않게 짜 두어서 비밀값(키)이 하나도 필요 없다.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# 같은 브랜치에 연달아 푸시하면 앞의 실행은 취소한다. 결과를 볼 필요가 없는 실행에 시간을 안 쓴다
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: 테스트와 패키징
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: 테스트
+        run: ./mvnw -B test
+
+      - name: 테스트 리포트 보관
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports
+          retention-days: 7
+
+      - name: jar 만들기
+        run: ./mvnw -B -DskipTests package
+
+  docker:
+    name: 도커 이미지 빌드
+    runs-on: ubuntu-latest
+    needs: test
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # 지금은 만들어지는지만 확인한다. 이미지 저장소에 올리는 건 배포 단계(로드맵 2단계)에서 붙인다
+      - name: 이미지 빌드
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: stock-portfolio:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

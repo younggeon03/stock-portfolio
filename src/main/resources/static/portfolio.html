@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>내 포트폴리오</title>
+
+    <!-- 파비콘. 파일을 따로 두지 않으려고 주소 안에 그림을 직접 적었다 -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📈</text></svg>">
+
+    <!--
+      Pretendard. 숫자 폭이 일정해서 금액이 세로로 줄을 선다.
+      못 받아오면 기기 기본 글꼴로 내려앉을 뿐 화면은 그대로 동작한다.
+      dynamic-subset 이라 실제로 쓰는 글자만 내려받는다.
+    -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+
+    <link rel="stylesheet" href="/portfolio.css">
+
+    <!--
+      TradingView 의 캔들차트 라이브러리.
+      인터넷이 막히면 차트만 안 뜨고 나머지는 그대로 동작한다.
+      (portfolio.js 가 로딩 실패를 확인해서 안내를 띄운다)
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.2.1/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+
+<div class="wrap">
+
+    <header class="topbar">
+        <div>
+            <h1>내 포트폴리오</h1>
+            <p class="sub">토스증권과 나무증권을 합쳐서 봅니다</p>
+        </div>
+        <div class="topbar-actions">
+            <button data-scope="ALL" class="scope primary">전체</button>
+            <button data-scope="TOSS" class="scope">토스</button>
+            <button data-scope="NAMUH" class="scope">나무</button>
+            <button id="refreshBtn" title="다시 불러오기">새로고침</button>
+            <button id="shotBtn">스크린샷으로 추가</button>
+        </div>
+    </header>
+
+    <input type="file" id="shotInput" accept="image/png,image/jpeg,image/gif,image/webp" hidden>
+
+    <main id="main">
+    <div id="message"></div>
+
+    <!-- 총자산. 이 화면에서 가장 큰 숫자 -->
+    <section class="hero" id="hero"></section>
+
+    <!-- 비중 스트립. 무엇을 얼마나 들고 있는지 한 줄로 보여준다 -->
+    <section class="alloc" id="alloc"></section>
+
+    <!-- 증권사별 금액 -->
+    <section class="brokers" id="brokers"></section>
+
+    <!--
+      보유종목.
+      기본으로 다섯 줄만 보이고 나머지는 스크롤로 본다. 표가 화면을 다 먹지 않게.
+      머리글은 스크롤해도 위에 붙어 있는다 (position: sticky).
+    -->
+    <div class="table-head">
+        <h2>보유종목</h2>
+        <span class="table-count" id="tableCount"></span>
+    </div>
+
+    <div class="table-wrap">
+        <div class="table-scroll" id="tableScroll">
+            <table class="holdings">
+                <thead>
+                <tr>
+                    <th>종목</th>
+                    <th>보유처</th>
+                    <th>수량</th>
+                    <th>현재가</th>
+                    <th>평가금액</th>
+                    <th>수익률</th>
+                    <th>변동성</th>
+                    <th class="bar-cell">비중</th>
+                    <th>기업분석</th>
+                </tr>
+                </thead>
+                <tbody id="holdingsBody"></tbody>
+            </table>
+        </div>
+        <!-- 아래에 더 있다는 표시. 끝까지 내리면 사라진다 -->
+        <div class="scroll-fade" id="scrollFade" aria-hidden="true"></div>
+    </div>
+
+    <p class="footnote">
+        같은 종목을 두 곳에 나눠 들고 있으면 하나로 합쳐 비중을 냅니다. 해외 주식은 원화로 환산합니다.<br>
+        변동성은 최근 60거래일 등락폭을 1년 기준으로 바꾼 값입니다. 기업분석은 클로드가 웹 검색으로 조사한 참고자료이니 출처를 확인하세요.<br>
+        이 앱은 조회와 분석만 합니다. 주문은 나가지 않습니다.
+    </p>
+    </main>
+
+</div>
+
+<!-- 끌어다 놓기 안내 -->
+<div id="dropZone">
+    <div class="drop-inner">
+        <div class="drop-icon">📸</div>
+        <div class="drop-title">놓으면 분석합니다</div>
+        <div class="drop-sub">증권사 앱의 보유종목 화면 캡처</div>
+    </div>
+</div>
+
+<!-- 종목 상세. 데스크톱은 오른쪽에서, 모바일은 아래에서 올라온다 -->
+<div id="drawerBackdrop"></div>
+<aside id="drawer" aria-label="종목 상세" inert>
+    <!--
+      크기 조절 손잡이. 데스크톱은 왼쪽 모서리를 좌우로, 모바일은 위쪽 모서리를 위아래로 끈다.
+      두 번 누르면 기본 크기(화면 절반)로 돌아간다.
+    -->
+    <div class="drawer-resize" id="drawerResize" role="separator" aria-orientation="vertical"
+         tabindex="0" aria-label="드래그해서 크기 조절. 두 번 누르면 기본값"
+         aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"
+         title="드래그해서 크기 조절 · 더블클릭하면 기본값"></div>
+    <div class="drawer-grip"></div>
+    <div class="drawer-head">
+        <div>
+            <h2 class="drawer-title" id="drawerTitle"></h2>
+            <div class="drawer-meta" id="drawerMeta"></div>
+            <div class="drawer-price" id="drawerPrice"></div>
+        </div>
+        <button class="drawer-close" id="drawerClose" title="닫기">&times;</button>
+    </div>
+
+    <!-- 기업분석이 먼저다. 종목을 누르는 이유가 "지금 어떤가" 를 보려는 것이기 때문 -->
+    <nav class="drawer-tabs">
+        <button data-tab="analysis" class="on">기업분석</button>
+        <button data-tab="chart">차트</button>
+        <button data-tab="news">뉴스</button>
+    </nav>
+
+    <div class="drawer-body">
+        <section class="tab-pane" data-pane="chart">
+            <div class="chart-legend" id="chartLegend"></div>
+            <div id="chartHost"></div>
+            <div class="chart-sub" id="chartSub"></div>
+        </section>
+
+        <section class="tab-pane" data-pane="news">
+            <!-- 목록은 0원이라 자동, 인사이트는 돈이 나가므로 버튼 -->
+            <div class="analysis-head">
+                <div class="analysis-meta" id="newsMeta"></div>
+                <button id="briefBtn" class="primary">인사이트 보기</button>
+            </div>
+            <div id="newsBody"></div>
+        </section>
+
+        <section class="tab-pane on" data-pane="analysis">
+            <div class="analysis-head">
+                <div class="analysis-meta" id="analysisMeta"></div>
+                <button id="analyzeBtn" class="primary">기업분석 실행</button>
+            </div>
+            <div id="analysisBody"></div>
+        </section>
+    </div>
+</aside>
+
+<!-- 스크린샷 검수 -->
+<div id="shotModal">
+    <div class="modal-box">
+        <div class="modal-head">
+            <div>
+                <h2>스크린샷에서 읽은 종목</h2>
+                <div class="msub" id="shotSub"></div>
+            </div>
+            <button class="close-x" id="shotClose" title="닫기">&times;</button>
+        </div>
+        <div class="modal-body" id="shotBody"></div>
+        <div class="modal-foot" id="shotFoot" style="display:none;">
+            <button id="addRowBtn">행 추가</button>
+            <span class="spacer"></span>
+            <button id="shotCancel">취소</button>
+            <button id="shotSave" class="primary">저장</button>
+        </div>
+    </div>
+</div>
+
+<script src="/portfolio.js"></script>
+</body>
+</html>
