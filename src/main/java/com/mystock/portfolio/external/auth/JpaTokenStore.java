@@ -26,9 +26,11 @@ public class JpaTokenStore implements TokenStore {
     private static final Logger log = LoggerFactory.getLogger(JpaTokenStore.class);
 
     private final OAuthTokenRepository repository;
+    private final TokenCipher cipher;
 
-    public JpaTokenStore(OAuthTokenRepository repository) {
+    public JpaTokenStore(OAuthTokenRepository repository, TokenCipher cipher) {
         this.repository = repository;
+        this.cipher = cipher;
     }
 
     @Override
@@ -36,7 +38,8 @@ public class JpaTokenStore implements TokenStore {
     public Optional<StoredToken> find(String provider, String ownerKey) {
         try {
             return repository.findByProviderAndOwnerKey(provider, ownerKey)
-                    .map(entity -> new StoredToken(entity.getAccessToken(), entity.getExpiresAt()));
+                    .flatMap(entity -> cipher.decrypt(entity.getAccessToken(), provider, ownerKey)
+                            .map(token -> new StoredToken(token, entity.getExpiresAt())));
         } catch (Exception e) {
             log.warn("{} 저장된 토큰을 읽지 못했습니다(새로 발급받습니다): {}", provider, e.getMessage());
             return Optional.empty();
@@ -47,10 +50,11 @@ public class JpaTokenStore implements TokenStore {
     @Transactional
     public void save(String provider, String ownerKey, String accessToken, Instant expiresAt) {
         try {
+            String sealed = cipher.encrypt(accessToken, provider, ownerKey);
             repository.findByProviderAndOwnerKey(provider, ownerKey)
                     .ifPresentOrElse(
-                            entity -> entity.replace(accessToken, expiresAt),
-                            () -> repository.save(new OAuthToken(provider, ownerKey, accessToken, expiresAt)));
+                            entity -> entity.replace(sealed, expiresAt),
+                            () -> repository.save(new OAuthToken(provider, ownerKey, sealed, expiresAt)));
         } catch (Exception e) {
             log.warn("{} 토큰을 저장하지 못했습니다(동작에는 지장 없음): {}", provider, e.getMessage());
         }

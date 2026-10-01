@@ -20,8 +20,8 @@ import java.time.LocalDateTime;
  *
  * ★ 보안 메모
  * 토큰은 비밀번호에 준하는 값이다. 이 값만 있으면 24시간 동안 계좌를 조회할 수 있다.
- * 지금은 내 PC 의 내 MySQL 에만 저장되므로 .env 에 키를 두는 것과 위험 수준이 비슷하다.
- * 서버에 배포해서 여러 사람이 쓰게 된다면 반드시 암호화해서 저장해야 한다.
+ * 그래서 access_token 에는 TokenCipher 가 암호화한 값("enc:v1:...")이 들어간다.
+ * TOKEN_ENCRYPTION_KEY 가 없으면 평문으로 들어가므로 서버에서는 반드시 키를 넣는다.
  */
 @Entity
 @Table(name = "oauth_token",
