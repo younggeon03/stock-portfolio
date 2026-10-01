@@ -38,7 +38,7 @@ java -jar target/portfolio-0.0.1-SNAPSHOT.jar
 - **`mvnw spring-boot:run` 은 실패합니다.** 경로에 한글(`주식`)이 있어 클래스패스가 깨집니다. 반드시 jar 로 실행하세요.
 - 빌드 중 `Unable to rename ... .jar` 가 나오면 앱이 아직 떠 있는 것입니다. 먼저 java 프로세스를 죽이세요.
 - **정적 파일도 jar 안에서 나옵니다.** css/js 만 고쳐도 다시 빌드하고 재시작해야 화면에 반영됩니다.
-- 테스트: `./mvnw.cmd test` — 69개. 외부 API·DB 를 부르지 않아 키 없이 돕니다. **CI 도 이 전제에 기대고 있습니다.** 키나 DB 가 필요한 테스트를 넣으면 GitHub Actions 가 깨집니다.
+- 테스트: `./mvnw.cmd test` — 77개. 외부 API·DB 를 부르지 않아 키 없이 돕니다. **CI 도 이 전제에 기대고 있습니다.** 키나 DB 가 필요한 테스트를 넣으면 GitHub Actions 가 깨집니다.
 - 도커: `docker compose up -d --build` 로 앱과 MySQL 을 같이 띄웁니다. 자세한 건 [운영](docs/운영.md).
 - **자바 파일을 파이썬·sed 문자열 치환으로 고치지 마세요.** 자바 문자열의 `\n`·`\\d` 가 진짜 줄바꿈이나 한 겹 이스케이프로 바뀌어 컴파일이 깨집니다. 세 번 겪었습니다(이 문장을 쓰다가 한 번 더). 편집 도구로 고치세요.
 

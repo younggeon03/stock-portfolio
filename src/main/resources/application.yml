@@ -25,6 +25,11 @@ management:
     tags:
       application: stock-portfolio
 
+# 증권사 토큰을 DB 에 넣기 전에 암호화하는 키 (base64, 32바이트). 비우면 평문으로 저장하고 기동 때 경고한다.
+# 만드는 법은 .env.example 7번. 키를 바꾸면 저장된 토큰을 못 풀어 한 번씩 새로 발급받는다.
+security:
+  token-encryption-key: ${TOKEN_ENCRYPTION_KEY:}
+
 # Swagger. 서버에서는 SWAGGER_ENABLED=false 로 끈다. 주소 목록이 공격 지도가 되기 때문이다.
 springdoc:
   api-docs:
