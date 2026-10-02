@@ -294,6 +294,21 @@ public class DartFinancialService {
     }
 
     /**
+     * 종목코드(6자리) 또는 정확한 회사 이름으로 상장사를 찾는다. 매핑이 비어 있으면 처음 한 번 받는다.
+     * 배당 캘린더처럼 다른 기능이 같은 매핑을 쓰게 연다.
+     */
+    public Optional<DartCorpCode> findCorp(String codeOrName) {
+        String q = codeOrName == null ? "" : codeOrName.strip();
+        if (q.isEmpty()) {
+            return Optional.empty();
+        }
+        if (corpCodes.count() == 0) {
+            refreshCorpCodes();
+        }
+        return q.matches("\\d{6}") ? corpCodes.findById(q) : corpCodes.findFirstByCorpName(q);
+    }
+
+    /**
      * 매핑 파일을 새로 받는다. 처음 한 번은 자동으로 돈다.
      * 새로 상장한 종목이 안 잡히면 이걸 다시 부르면 된다.
      * 같은 클래스 안에서 불리므로 @Transactional 을 붙여도 안 듣는다. 지우기·넣기가 각자 트랜잭션이다.
