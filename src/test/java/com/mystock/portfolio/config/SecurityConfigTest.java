@@ -62,7 +62,22 @@ class SecurityConfigTest {
         void 내_화면은_브라우저면_로그인_화면으로_넘긴다() throws Exception {
             // 브라우저는 Accept: text/html 을 보낸다. 그때만 로그인 화면으로 넘기고, 그 밖의 클라이언트는 401
             mvc.perform(get("/portfolio.html").accept(org.springframework.http.MediaType.TEXT_HTML))
-                    .andExpect(status().is3xxRedirection());
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                            .redirectedUrlPattern("**/public/login.html"));
+        }
+
+        @Test
+        void 모든_응답에_인라인_스크립트를_막는_보안_헤더가_붙는다() throws Exception {
+            when(institutionService.list()).thenReturn(List.of());
+
+            mvc.perform(get("/api/institutions"))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                            .string("Content-Security-Policy", org.hamcrest.Matchers.allOf(
+                                    org.hamcrest.Matchers.containsString("script-src 'self' https://cdn.jsdelivr.net;"),
+                                    org.hamcrest.Matchers.containsString("frame-ancestors 'none'"))))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                            .string("Referrer-Policy", "strict-origin-when-cross-origin"));
         }
 
         @Test

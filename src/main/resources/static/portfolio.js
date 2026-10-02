@@ -115,7 +115,7 @@ function apiFetch(url, options = {}) {
     return fetch(url, Object.assign({}, options, { headers: headers })).then(res => {
         // 로그인이 풀렸다 (서버를 다시 띄웠거나 12시간이 지남). 로그인 화면으로 보낸다
         if (res.status === 401) {
-            location.href = "/login";
+            location.href = "/public/login.html";
         }
         return res;
     });

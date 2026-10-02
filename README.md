@@ -116,7 +116,7 @@ docker compose up -d --build # 앱 + MySQL
 | 차트 | TradingView Lightweight Charts |
 | 분석 | Anthropic Java SDK, 웹검색 도구 |
 | 외부 API | 토스증권 Open API, 나무증권 NAMUH PLUG, DART OpenAPI, SEC EDGAR |
-| 테스트 | JUnit 5, AssertJ, 136개 |
+| 테스트 | JUnit 5, AssertJ, 140개 |
 | 빌드·배포 | Docker, GitHub Actions (PR 마다 테스트·커버리지·이미지 빌드, `main` 병합 시 ghcr.io 에 이미지 게시) |
 | 운영 | Actuator 헬스체크·Prometheus 지표, Flyway 마이그레이션, 토큰 AES-GCM 암호화 |
 
