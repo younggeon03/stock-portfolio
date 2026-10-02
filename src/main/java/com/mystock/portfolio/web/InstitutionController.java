@@ -75,6 +75,67 @@ public class InstitutionController {
     }
 
     /**
+     * 내 포트폴리오와 기관 10곳의 겹침 순위. h=AAPL:30,NVDA:20 (티커:비중, 비중은 아무 단위나 — 합계를 100% 로 맞춘다).
+     * GET 이라 주소를 공유하면 같은 결과가 나온다. 입력은 저장하지 않는다. 13F 는 미국 주식만 있다.
+     */
+    @GetMapping("/overlap")
+    public List<InstitutionPortfolioService.OverlapSummary> overlap(@RequestParam("h") String holdings) {
+        return portfolioService.overlapAll(parseHoldings(holdings));
+    }
+
+    /** 기관 하나와의 겹침: 같이 가진 종목, 나만 가진 종목, 그 기관 상위 종목 중 내게 없는 것 */
+    @GetMapping("/{cik}/overlap")
+    public ResponseEntity<InstitutionPortfolioService.OverlapDetail> overlapOne(
+            @PathVariable long cik, @RequestParam("h") String holdings) {
+        return portfolioService.overlapOne(cik, parseHoldings(holdings))
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /** 한 번에 받는 종목 수. 공개 주소라 아주 긴 입력으로 서버를 괴롭히지 못하게 막는다 */
+    static final int MAX_HOLDINGS = 50;
+    private static final java.util.regex.Pattern TICKER = java.util.regex.Pattern.compile("[A-Za-z0-9.\\-/]{1,12}");
+
+    /** "AAPL:30,NVDA:20" → 목록. 모양이 틀리면 400 (무엇이 틀렸는지 알려준다) */
+    static List<com.mystock.portfolio.service.institution.Overlap.Mine> parseHoldings(String raw) {
+        if (raw == null || raw.isBlank()) {
+            throw new IllegalArgumentException("비교할 종목이 없습니다. 예: AAPL:30,NVDA:20");
+        }
+        String[] parts = raw.split(",");
+        if (parts.length > MAX_HOLDINGS) {
+            throw new IllegalArgumentException("종목은 " + MAX_HOLDINGS + "개까지 넣을 수 있습니다");
+        }
+        List<com.mystock.portfolio.service.institution.Overlap.Mine> out = new java.util.ArrayList<>();
+        for (String part : parts) {
+            String p = part.strip();
+            if (p.isEmpty()) {
+                continue;
+            }
+            String[] kv = p.split(":");
+            String ticker = kv[0].strip();
+            if (!TICKER.matcher(ticker).matches()) {
+                throw new IllegalArgumentException("티커 모양이 아닙니다: " + ticker);
+            }
+            double weight = 1;
+            if (kv.length > 1) {
+                try {
+                    weight = Double.parseDouble(kv[1].strip().replace("%", ""));
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("비중이 숫자가 아닙니다: " + p);
+                }
+            }
+            if (!(weight > 0) || weight > 1e9) {
+                throw new IllegalArgumentException("비중은 0보다 커야 합니다: " + p);
+            }
+            out.add(new com.mystock.portfolio.service.institution.Overlap.Mine(ticker, weight));
+        }
+        if (out.isEmpty()) {
+            throw new IllegalArgumentException("비교할 종목이 없습니다. 예: AAPL:30,NVDA:20");
+        }
+        return out;
+    }
+
+    /**
      * 지금 받기. 뒤에서 돌고 바로 돌아온다. 처음이면 10곳 × 8분기라 몇 분,
      * 티커 찾기까지 끝나려면 (노르웨이 중앙은행 때문에) 30분쯤 걸린다. 진행은 GET /sync 로 본다.
      */
