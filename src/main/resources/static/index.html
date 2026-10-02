@@ -10,6 +10,7 @@
     <meta property="og:type" content="website">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📈</text></svg>">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-kr@5.2.5/700.css">
     <link rel="stylesheet" href="/public/tokens.css">
     <link rel="stylesheet" href="/public/site.css">
     <link rel="stylesheet" href="/public/nav.css">
@@ -21,14 +22,45 @@
 
     <header class="site-head">
         <a class="brand" href="/">포트폴리오 분석기</a>
+        <span class="edition" id="edition"></span>
     </header>
 
     <main id="main">
-        <h1>국민연금과 버크셔는 이번 분기에 무엇을 샀을까</h1>
-        <p class="lead">
-            미국 주식을 1억 달러 넘게 가진 기관은 분기가 끝나고 45일 안에 보유 종목을 미국 SEC 에 공개합니다(13F).
-            10곳의 공개 자료를 매일 받아 한국어로 정리했습니다.
-        </p>
+        <!-- 한 줄 요약과 그림은 home.js 가 자료로 채운다. 숫자를 HTML 에 박아두면 분기마다 틀린다 -->
+        <section class="brief" aria-labelledby="headline">
+            <div>
+                <span class="kicker">이번 분기 한 줄</span>
+                <h1 id="headline">국민연금과 버크셔는 이번 분기에 무엇을 샀을까</h1>
+                <p class="lead">
+                    미국 주식을 1억 달러 넘게 가진 기관은 분기가 끝나고 45일 안에 보유 종목을 미국 SEC 에 공개합니다(13F).
+                    10곳의 공개 자료를 매일 받아 같은 기준으로 비교합니다.
+                </p>
+            </div>
+            <figure class="brief-figure" id="featured" hidden>
+                <figcaption id="featuredCaption"></figcaption>
+                <div class="treemap" id="treemap" role="img"></div>
+            </figure>
+        </section>
+
+        <section class="brief-cols" aria-label="이번 분기 요약">
+            <article id="featuredChanges" hidden>
+                <span class="kicker" id="featuredChangesTitle"></span>
+                <ul class="changebars" id="changebars"></ul>
+                <span class="foot" id="featuredChangesFoot"></span>
+            </article>
+            <article>
+                <span class="kicker">여러 곳이 같이 산 종목</span>
+                <h2 id="consensusHead">불러오는 중…</h2>
+                <p id="consensusText"></p>
+                <a href="#consensus">같이 산 종목 전체</a>
+            </article>
+            <article>
+                <span class="kicker">내 포트폴리오는 누구와 닮았나</span>
+                <h2>종목과 비중만 넣으면</h2>
+                <p>10곳과 얼마나 겹치는지 계산합니다. 입력한 내용은 저장하지 않습니다.</p>
+                <a class="cta" href="/public/overlap.html">비교해 보기</a>
+            </article>
+        </section>
 
         <h2 id="institutions-title">기관 목록</h2>
         <p class="section-note">비중은 각 기관이 13F 에 적은 미국 주식 합계 대비입니다. 기관 전체 자산 대비가 아닙니다.</p>
