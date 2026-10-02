@@ -29,7 +29,7 @@
     const [holdings, changes, consensus] = await Promise.all([
         featured ? getJson(`/api/institutions/${featured.cik}/holdings`).catch(() => null) : null,
         featured ? getJson(`/api/institutions/${featured.cik}/changes`).catch(() => null) : null,
-        getJson("/api/institutions/consensus?limit=20").catch(e => e)
+        getJson("/api/institutions/consensus?limit=5").catch(e => e)
     ]);
 
     renderTreemap(holdings);
@@ -76,7 +76,7 @@
             const v = Number(r.sharesChangePercent);
             const cls = v >= 0 ? "rise" : "fall";
             const width = Math.max(2, Math.min(100, Math.abs(v) / max * 100));
-            return `<li class="${cls}"><span class="ticker">${esc(r.ticker)}</span>
+            return `<li class="${cls}">${stockLink(r.ticker)}
                 <span class="track" aria-hidden="true"><i style="width:${width.toFixed(1)}%"></i></span>
                 <span class="v ${cls}">${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(0)}%</span></li>`;
         }).join("");
@@ -106,7 +106,7 @@
             return null;
         }
         document.getElementById("consensusNote").textContent =
-            `${quarter(c.period)}, 바로 앞 분기와 비교할 수 있는 기관 ${c.compared}곳 기준입니다. 두 곳 이상인 종목만 보입니다.`;
+            `${quarter(c.period)}, 바로 앞 분기와 비교할 수 있는 기관 ${c.compared}곳 기준입니다. 두 곳 이상 겹친 종목 중 상위 5개입니다. 종목을 누르면 기업분석이 열립니다.`;
         bought.className = sold.className = "";
         bought.innerHTML = consensusTable(c.bought, "buyers", "늘린 기관", "같이 늘린 종목");
         sold.innerHTML = consensusTable(c.sold, "sellers", "줄인 기관", "같이 줄인 종목");
@@ -117,7 +117,8 @@
             head.textContent = "같이 늘린 종목이 없습니다";
             return null;
         }
-        head.textContent = b.map(r => r.ticker || r.name).join(" · ");
+        // 요약 칸의 티커도 누르면 기업분석 창이 열린다
+        head.innerHTML = b.map(r => r.ticker ? stockLink(r.ticker, "head-link") : esc(r.name)).join(" · ");
         text.textContent = `${c.compared}곳 중 최대 ${b[0].buyers.length}곳이 같은 석 달에 늘렸습니다.`
             + (s.length ? ` 같이 줄인 쪽은 ${s.map(r => r.ticker || r.name).join("·")}(최대 ${s[0].sellers.length}곳)입니다.` : "");
         return b[0];

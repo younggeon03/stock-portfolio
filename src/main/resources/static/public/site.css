@@ -134,8 +134,7 @@ code { font-size: 12.5px; background: var(--bg-sunken); padding: 1px 5px; border
 /*
  * 비중 트리맵. 칸 크기가 비중이고, 칸의 명도가 순위다(색은 등락 전용이라 못 쓴다).
  * 칸 위치는 home.js 가 계산해서 % 로 넣는다. 화면 폭이 바뀌어도 JS 가 다시 그릴 필요가 없다.
- * 글자색: 진한 칸(1~3위)은 바탕색, 옅은 칸은 잉크색. 어두운 화면에서는 seg 명도가 뒤집혀서
- * 같은 규칙이 그대로 맞는다.
+ * 글자색: 진한 칸(1~3위)은 바탕색, 옅은 칸은 잉크색.
  */
 .treemap { position: relative; height: 240px; font-size: 12px; font-variant-numeric: tabular-nums; }
 .treemap .cell { position: absolute; overflow: hidden; padding: 8px 9px; border: 1.5px solid var(--bg);
@@ -211,3 +210,77 @@ code { font-size: 12.5px; background: var(--bg-sunken); padding: 1px 5px; border
 /* 제목 위의 작은 머리표. 머리표가 있으면 위 여백을 머리표가 가져간다 */
 main > .kicker:first-child { margin-top: var(--s-7); }
 .kicker + h1 { margin-top: 0; }
+
+/* ══ 기업분석 창 (stock.js) ══ */
+
+/* 표 안의 티커. 글자처럼 보이되 버튼이라 키보드로 열린다 */
+.stock-link { font: inherit; font-weight: 600; color: var(--ink); background: none; border: 0; padding: 0;
+              min-height: 0; cursor: pointer; text-decoration: underline; text-decoration-color: var(--rule-2);
+              text-underline-offset: 3px; }
+.stock-link:hover { background: none; color: var(--ink); text-decoration-color: var(--ink); }
+.stock-link.head-link { font-family: var(--font-serif); font-weight: 700; }
+
+.stock-backdrop { position: fixed; inset: 0; z-index: 2100; background: rgba(26, 28, 32, 0.32);
+                  opacity: 0; pointer-events: none; transition: opacity 0.2s var(--ease); }
+.stock-drawer { position: fixed; top: 0; right: 0; bottom: 0; z-index: 2200; width: min(600px, 100vw);
+                background: var(--bg); border-left: 1px solid var(--rule-2); box-shadow: var(--shadow-side);
+                transform: translateX(102%); transition: transform 0.26s var(--ease-out);
+                display: flex; flex-direction: column; }
+.stock-open .stock-drawer { transform: none; }
+.stock-open .stock-backdrop { opacity: 1; pointer-events: auto; }
+.stock-open { overflow: hidden; }   /* 창 뒤의 페이지가 같이 스크롤되지 않게 */
+
+.stock-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s-4);
+              padding: var(--s-5) var(--s-5) var(--s-4); border-bottom: 2px solid var(--ink); }
+.stock-head h2 { margin: 0; font-size: 30px; }
+.stock-name { margin: 2px 0 0; font-size: 13px; color: var(--ink-3); }
+.stock-close { font-size: 24px; line-height: 1; width: 44px; height: 44px; padding: 0; flex: none; }
+
+.stock-body { overflow-y: auto; padding: var(--s-4) var(--s-5) var(--s-6); }
+.stock-body section { margin-top: var(--s-6); }
+.stock-body h3 { margin: 0 0 var(--s-3); font-size: 15px; font-weight: 700; }
+.stock-body h3 .muted { font-weight: 400; font-size: 12px; margin-left: var(--s-2); }
+.stock-body .muted { font-size: 13px; }
+.stock-summary { margin: var(--s-2) 0 0; font-family: var(--font-serif); font-weight: 700; font-size: 21px;
+                 line-height: 1.5; word-break: keep-all; }
+
+/* 읽을 점. 한 줄에 제목과 문장. "확인할 점" 은 왼쪽 굵은 선으로 세운다(색은 등락 전용) */
+.stock-notes { list-style: none; margin: 0; padding: 0; }
+.stock-notes li { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: var(--s-3);
+                  padding: var(--s-3) 0; border-bottom: 1px solid var(--rule); font-size: var(--read);
+                  line-height: 1.75; word-break: keep-all; }
+.stock-notes li b { font-size: 13px; color: var(--ink-3); font-weight: 600; padding-top: 2px; }
+.stock-notes li.check { border-left: 3px solid var(--ink); padding-left: var(--s-3); }
+.stock-notes li.check b { color: var(--ink); }
+
+.stock-fin th[scope="row"] { font-size: 13px; color: var(--ink-2); font-weight: 500; border-bottom: 1px solid var(--rule); }
+.stock-fin td .sub { font-size: 11.5px; }
+.stock-foot { margin-top: var(--s-6); font-size: var(--read-sm); color: var(--ink-3); line-height: 1.8; }
+
+@media (max-width: 700px) {
+    .stock-head, .stock-body { padding-left: var(--s-4); padding-right: var(--s-4); }
+    .stock-notes li { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .stock-drawer, .stock-backdrop { transition: none; }
+}
+.stock-link { text-align: left; justify-self: start; }
+
+/* 첫 화면의 티커 찾기 칸 */
+.stock-search { display: flex; align-items: center; gap: var(--s-2); margin-top: var(--s-5); flex-wrap: wrap; }
+.stock-search label { font-size: 13px; font-weight: 600; color: var(--ink-2); margin-right: var(--s-1); }
+.stock-search input { font: inherit; font-size: 14px; min-height: 44px; padding: 0 12px; width: 200px;
+                      border: 1px solid var(--rule-2); border-radius: var(--r-1); background: var(--bg-raised);
+                      color: var(--ink); text-transform: uppercase; }
+.stock-search input::placeholder { text-transform: none; color: var(--ink-3); }
+.stock-search button { min-height: 44px; }
+
+/* 기업분석 페이지(company.html). 창과 같은 본문을 페이지 폭에 맞춰 읽는 폭으로 */
+.stock-picks { font-size: 13px; color: var(--ink-3); margin: var(--s-3) 0 0; display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4); }
+.stock-page { max-width: 760px; margin-top: var(--s-6); }
+.stock-page:empty { display: none; }
+.stock-page-head { border-bottom: 2px solid var(--ink); padding-bottom: var(--s-3); }
+.stock-page-head h2 { margin: 0; font-size: 34px; }
+.stock-page section { margin-top: var(--s-6); }
+.stock-page h3 { margin: 0 0 var(--s-3); font-size: 15px; font-weight: 700; }
+.stock-page h3 .muted { font-weight: 400; font-size: 12px; margin-left: var(--s-2); }

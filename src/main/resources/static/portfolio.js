@@ -56,10 +56,10 @@ let dragDepth = 0;
 
 /** 이동평균선 설정. 국내 증권사 기본값이다 */
 const MA_STYLE = {
-    5:   { color: "#f08c00", dark: "#ffb340", label: "5일" },
-    20:  { color: "#2f9e44", dark: "#5fd67e", label: "20일" },
-    60:  { color: "#7048e8", dark: "#a98cff", label: "60일" },
-    120: { color: "#868e96", dark: "#aeb6c0", label: "120일" }
+    5:   { color: "#f08c00", label: "5일" },
+    20:  { color: "#2f9e44", label: "20일" },
+    60:  { color: "#7048e8", label: "60일" },
+    120: { color: "#868e96", label: "120일" }
 };
 
 /**
@@ -74,11 +74,6 @@ const MA_STYLE = {
  * 앞쪽 데이터는 그대로 들어 있으니 왼쪽으로 끌면 계속 나온다.
  */
 const CHART_VISIBLE_BARS = 80;
-
-/** 차트가 화면 모드(밝은/어두운)를 따라가게 한다 */
-function isDarkMode() {
-    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-}
 
 /** CSS 변수 하나를 읽는다. 색을 두 군데에 적어두면 반드시 어긋난다 */
 function cssVar(name, fallback) {
@@ -766,18 +761,6 @@ function disposeChart() {
     chartSub.textContent = "";
 }
 
-/*
- * 화면 모드가 바뀌면 차트를 다시 그린다.
- *
- * 차트는 캔버스라 CSS 변수를 스스로 따라가지 못한다.
- * 이걸 안 걸어두면 밝은 화면에서 보다가 어두워졌을 때 차트만 하얗게 남는다.
- */
-if (window.matchMedia) {
-    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-        if (lastChartData) drawChart(lastChartData);
-    });
-}
-
 /**
  * 차트 크기를 화면에 맞춘다.
  *
@@ -879,8 +862,7 @@ function drawChart(data) {
 
     const isUsd = data.currency === "USD";
 
-    // 색은 CSS 변수에서 읽는다. 여기에 직접 적으면 어두운 화면에서 차트만 하얗게 남는다
-    const dark = isDarkMode();
+    // 색은 CSS 변수에서 읽는다. 여기에 직접 적으면 토큰(종이색 바탕)을 바꿀 때 차트만 옛 색으로 남는다
     const bg = cssVar("--bg", "#ffffff");
     const grid = cssVar("--rule", "#f2f4f6");
     const border = cssVar("--rule-2", "#e5e8eb");
@@ -923,15 +905,14 @@ function drawChart(data) {
         if (!style || !ma.values || ma.values.length === 0) return;
 
         const line = chart.addSeries(LC.LineSeries, {
-            // 어두운 화면에서는 같은 색이 바탕에 묻힌다. 밝기를 올린 짝을 따로 둔다
-            color: dark ? style.dark : style.color, lineWidth: 2,
+            color: style.color, lineWidth: 2,
             priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false
         });
         line.setData(ma.values.map(v => ({ time: v.date, value: Number(v.value) })));
         maSeries[ma.period] = line;
     });
 
-    renderChartLegend(data, dark);
+    renderChartLegend(data);
 
     /*
      * 보이는 구간을 마지막 80봉으로 맞춘다.
@@ -968,7 +949,7 @@ function drawChart(data) {
 }
 
 /** 이평선 범례. 누르면 해당 선을 켜고 끈다 (좁은 화면에서 선 4개는 뻑뻑하다) */
-function renderChartLegend(data, dark) {
+function renderChartLegend(data) {
     const periods = (data.movingAverages || [])
         .filter(ma => ma.values && ma.values.length > 0)
         .map(ma => ma.period);
@@ -976,7 +957,7 @@ function renderChartLegend(data, dark) {
     if (periods.length === 0) { chartLegend.innerHTML = ""; return; }
 
     chartLegend.innerHTML = periods.map(p => {
-        const color = dark ? MA_STYLE[p].dark : MA_STYLE[p].color;
+        const color = MA_STYLE[p].color;
         return `<button data-ma="${p}"><span class="dot" style="background:${color}"></span>${MA_STYLE[p].label}</button>`;
     }).join("");
 

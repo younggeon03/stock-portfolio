@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -222,6 +223,66 @@ public class InstitutionPortfolioService {
                 .findFirst().orElse(null);
     }
 
+    /**
+     * 한 종목을 기관마다 어떻게 들고 있나. 공개 종목 창의 "기관은 어떻게 움직였나" 칸이다.
+     *
+     * 기관마다 최신 분기를 바로 앞 분기와 비교한다. 바로 앞 분기가 없으면(노르웨이 1·3분기 비공개)
+     * 변화는 비우고 보유만 보인다. 반년 전과 비교한 것을 "이번 분기에 늘렸다" 로 보이면 틀린다.
+     * 안 가진 기관도 목록에 남긴다. "10곳 중 몇 곳이 갖고 있나" 가 이 칸의 첫 사실이다.
+     */
+    public StockMovesView movesFor(String ticker) {
+        List<String> cusips = tickers.findByTicker(ticker).stream().map(CusipTicker::getCusip).toList();
+        List<StockMove> moves = new ArrayList<>();
+        LocalDate latest = null;
+        for (Institution inst : institutions.findByActiveTrueOrderBySortOrder()) {
+            List<Filing13F> fs = visible(inst.getCik());
+            if (fs.isEmpty()) {
+                continue;
+            }
+            Filing13F now = fs.get(0);
+            if (latest == null || now.getReportPeriod().isAfter(latest)) {
+                latest = now.getReportPeriod();
+            }
+            Filing13F before = fs.size() > 1
+                    && fs.get(1).getReportPeriod().equals(previousQuarterEnd(now.getReportPeriod())) ? fs.get(1) : null;
+
+            List<HoldingDiff.Position> nowPos = positionOf(now, cusips, ticker);
+            HoldingDiff.Change change = before == null ? null
+                    : HoldingDiff.diff(nowPos, positionOf(before, cusips, ticker)).stream().findFirst().orElse(null);
+            HoldingDiff.Position held = nowPos.isEmpty() ? null : nowPos.get(0);
+            moves.add(new StockMove(inst.getCik(), inst.getNameKo(), now.getReportPeriod(),
+                    before == null ? null : before.getReportPeriod(),
+                    held == null ? 0 : held.shares(), held == null ? 0 : held.valueUsd(),
+                    held == null ? null : held.weightPercent(),
+                    change == null ? null : change.kind(),
+                    change == null ? null : change.sharesChangePercent(),
+                    change == null ? null : change.weightBefore()));
+        }
+        // 비중이 큰 기관부터. 안 가진 곳은 뒤로
+        moves.sort(Comparator.comparing((StockMove m) -> m.weightPercent() == null ? BigDecimal.valueOf(-1) : m.weightPercent())
+                .reversed());
+        return new StockMovesView(ticker, latest, moves);
+    }
+
+    /**
+     * 제출 하나에서 이 종목만 꺼내 한 줄로 합친다 (옵션 제외).
+     * 티커 하나에 CUSIP 이 여럿이면 합친다. 비교 키(cusip 자리)에 티커를 넣어 두 분기가 같은 줄로 맞물리게 한다.
+     */
+    private List<HoldingDiff.Position> positionOf(Filing13F filing, List<String> cusips, String ticker) {
+        if (cusips.isEmpty()) {
+            return List.of();
+        }
+        List<Holding13F> rows = holdings.findByAccessionNoAndCusipIn(filing.getAccessionNo(), cusips).stream()
+                .filter(h -> h.getPutCall().isEmpty()).toList();
+        if (rows.isEmpty()) {
+            return List.of();
+        }
+        long shares = rows.stream().mapToLong(Holding13F::getShares).sum();
+        long value = rows.stream().mapToLong(Holding13F::getValueUsd).sum();
+        return List.of(new HoldingDiff.Position(ticker, ticker, rows.get(0).getIssuerName(), shares, value,
+                percent(value, filing.getTotalValueUsd())));
+    }
+
     /** 바로 앞 분기말. 2026-06-30 → 2026-03-31, 2026-03-31 → 2025-12-31 */
     static LocalDate previousQuarterEnd(LocalDate quarterEnd) {
         return quarterEnd.withDayOfMonth(1).minusMonths(2).minusDays(1);
@@ -321,6 +382,19 @@ public class InstitutionPortfolioService {
                 return new ConsensusRow(cusip, ticker, name, List.copyOf(buyers), List.copyOf(sellers));
             }
         }
+    }
+
+    /** 한 종목을 따라가는 기관들이 어떻게 들고 있나. period 는 그중 가장 최근 분기 */
+    public record StockMovesView(String ticker, LocalDate period, List<StockMove> institutions) {
+    }
+
+    /**
+     * 기관 한 곳의 이 종목. 안 가졌으면 shares 0, weightPercent null.
+     * kind 가 null 이면 바로 앞 분기와 비교할 수 없거나 두 분기 다 안 가진 것
+     */
+    public record StockMove(long cik, String nameKo, LocalDate period, LocalDate previousPeriod,
+                            long shares, long valueUsd, BigDecimal weightPercent,
+                            HoldingDiff.Kind kind, BigDecimal sharesChangePercent, BigDecimal weightBefore) {
     }
 
     /** 한 분기 보유 전체 */
