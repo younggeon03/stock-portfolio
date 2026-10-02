@@ -148,3 +148,12 @@ thirteenf:
 # 무료 키: https://www.openfigi.com/api
 openfigi:
   api-key: ${OPENFIGI_API_KEY:}
+
+# 이 앱의 바깥 주소. 피드·알림 글 속 링크에 쓴다. 서버에서는 https://도메인
+app:
+  base-url: ${APP_BASE_URL:http://localhost:8080}
+
+# 새 13F 를 텔레그램 채널로 알린다. 둘 다 있어야 켜진다. 만드는 법은 TelegramNotifier 주석과 docs/운영.md
+telegram:
+  bot-token: ${TELEGRAM_BOT_TOKEN:}
+  chat-id: ${TELEGRAM_CHAT_ID:}

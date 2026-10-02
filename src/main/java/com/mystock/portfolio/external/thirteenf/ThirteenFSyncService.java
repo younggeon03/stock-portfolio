@@ -54,6 +54,7 @@ public class ThirteenFSyncService {
     private final Holding13FRepository holdings;
     private final CusipTickerRepository tickers;
     private final TransactionTemplate tx;
+    private final org.springframework.context.ApplicationEventPublisher events;
     private final int quarters;
 
     private final AtomicBoolean running = new AtomicBoolean(false);
@@ -67,7 +68,8 @@ public class ThirteenFSyncService {
     public ThirteenFSyncService(ThirteenFApiClient secClient, OpenFigiClient figiClient,
                                 InstitutionRepository institutions, Filing13FRepository filings,
                                 Holding13FRepository holdings, CusipTickerRepository tickers,
-                                TransactionTemplate tx, @Value("${thirteenf.quarters:8}") int quarters) {
+                                TransactionTemplate tx, org.springframework.context.ApplicationEventPublisher events,
+                                @Value("${thirteenf.quarters:8}") int quarters) {
         this.secClient = secClient;
         this.figiClient = figiClient;
         this.institutions = institutions;
@@ -75,6 +77,7 @@ public class ThirteenFSyncService {
         this.holdings = holdings;
         this.tickers = tickers;
         this.tx = tx;
+        this.events = events;
         this.quarters = quarters;
     }
 
@@ -159,6 +162,8 @@ public class ThirteenFSyncService {
                 log.info("13F {} {} 분기는 금액이 천 달러 단위라 달러로 바꿨습니다", inst.getNameKo(), ref.reportPeriod());
             }
             save(inst.getCik(), ref, rows);
+            // 저장(커밋)이 끝난 뒤에 알린다. 알림 쪽이 실패해도 받은 자료는 남는다
+            events.publishEvent(new NewFilingEvent(inst.getCik(), inst.getNameKo(), ref.reportPeriod(), ref.filedDate(), rows.size()));
             counts[0]++;
             counts[1] += rows.size();
             log.info("13F {} {} 분기 {}줄 저장", inst.getNameKo(), ref.reportPeriod(), rows.size());
