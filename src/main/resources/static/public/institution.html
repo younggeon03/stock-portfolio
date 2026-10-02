@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>기관 포트폴리오</title>
+    <meta name="description" content="SEC 13F 로 공개된 기관의 미국 주식 보유와 분기 변화.">
+    <meta property="og:type" content="website">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📈</text></svg>">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+    <link rel="stylesheet" href="/public/tokens.css">
+    <link rel="stylesheet" href="/public/site.css">
+</head>
+<body>
+<a class="skip" href="#main">본문으로 건너뛰기</a>
+<div class="wrap">
+
+    <header class="site-head">
+        <a class="brand" href="/">기관 포트폴리오</a>
+        <nav aria-label="주요 메뉴">
+            <a href="/">기관 목록</a>
+            <a href="/#consensus">같이 산 종목</a>
+        </nav>
+    </header>
+
+    <main id="main">
+        <h1 id="title">불러오는 중…</h1>
+        <p class="lead" id="who"></p>
+        <p class="notice" id="note" hidden></p>
+        <ul class="facts" id="facts"></ul>
+
+        <div class="controls">
+            <label for="period">분기</label>
+            <select id="period"></select>
+            <span class="muted" id="filed"></span>
+        </div>
+
+        <h2 id="changes-title">이번 분기에 바뀐 종목</h2>
+        <p class="section-note" id="changesNote">주식 수로 비교합니다. 금액은 주가만 올라도 늘어나서입니다. 옵션은 뺐습니다.</p>
+        <div id="changes" class="loading">불러오는 중…</div>
+
+        <h2 id="holdings-title">보유 전체</h2>
+        <p class="section-note">비중은 이 기관의 13F 합계 대비입니다. PUT·CALL 은 옵션이며 주식과 따로 적습니다.</p>
+        <div id="holdings" class="loading">불러오는 중…</div>
+    </main>
+
+    <footer class="site-foot">
+        <p>자료: 미국 SEC EDGAR 의 13F-HR 원본 (<a id="secLink" href="https://www.sec.gov/edgar/search/" rel="noopener">EDGAR 에서 원문 보기</a>).
+            정정 제출은 반영하지 않습니다.</p>
+        <p>분기말 기준이며 공개는 최대 45일 늦습니다. 미국 상장 주식·옵션만 들어 있습니다.</p>
+        <p>사실을 정리할 뿐 매수·매도를 권하지 않습니다.</p>
+    </footer>
+</div>
+
+<script src="/public/site.js"></script>
+<script>
+(async function () {
+    const params = new URLSearchParams(location.search);
+    const cik = params.get("cik");
+    const title = document.getElementById("title");
+    if (!cik || !/^\d+$/.test(cik)) {
+        title.textContent = "기관을 찾을 수 없습니다";
+        return;
+    }
+    document.getElementById("secLink").href =
+        "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&type=13F-HR&CIK=" + encodeURIComponent(cik);
+
+    const select = document.getElementById("period");
+    select.addEventListener("change", () => {
+        params.set("period", select.value);
+        history.replaceState(null, "", "?" + params.toString());
+        load(select.value);
+    });
+    await load(params.get("period"));
+
+    async function load(period) {
+        const q = period ? "?period=" + encodeURIComponent(period) : "";
+        let h;
+        try {
+            h = await getJson(`/api/institutions/${cik}/holdings${q}`);
+        } catch (e) {
+            title.textContent = "불러오지 못했습니다";
+            return;
+        }
+        if (!h) {
+            title.textContent = "아직 받은 자료가 없습니다";
+            document.getElementById("changes").textContent = "";
+            document.getElementById("holdings").textContent = "";
+            return;
+        }
+        const inst = h.institution;
+        title.textContent = inst.nameKo;
+        document.title = inst.nameKo + " 포트폴리오 — " + quarter(h.period) + " | 기관 포트폴리오";
+        document.getElementById("who").textContent = [inst.manager, inst.name].filter(Boolean).join(" · ");
+        const note = document.getElementById("note");
+        note.hidden = !inst.note;
+        note.textContent = inst.note || "";
+
+        if (select.options.length === 0) {
+            select.innerHTML = inst.periods.map(p => `<option value="${esc(p)}">${quarter(p)} (${esc(p)})</option>`).join("");
+        }
+        select.value = h.period;
+        document.getElementById("filed").textContent = h.filedDate + " 공개";
+
+        const stocks = h.holdings.filter(r => !r.putCall);
+        const top10 = stocks.slice(0, 10).reduce((s, r) => s + Number(r.weightPercent), 0);
+        document.getElementById("facts").innerHTML = `
+            <li><b>${usd(h.totalValueUsd)}</b>13F 합계</li>
+            <li><b>${count(h.holdings.length)}</b>보유 줄</li>
+            <li><b>${top10.toFixed(1)}%</b>상위 10종목 비중</li>`;
+
+        renderHoldings(h.holdings);
+        renderChanges(await getJson(`/api/institutions/${cik}/changes${q}`).catch(() => null));
+    }
+
+    function renderHoldings(rows) {
+        const box = document.getElementById("holdings");
+        box.className = "";
+        box.innerHTML = `<table aria-labelledby="holdings-title">
+            <thead><tr><th scope="col">종목</th><th scope="col" class="r">비중</th>
+                <th scope="col" class="r hide-sm">금액</th><th scope="col" class="r hide-sm">주식 수</th></tr></thead>
+            <tbody>${rows.map(r => `
+                <tr><td>${security(r.ticker, r.issuerName)}${r.putCall ? ` <span class="kind muted">${esc(r.putCall)}</span>` : ""}</td>
+                    <td class="r num">${pct(r.weightPercent)}${weightBar(r.weightPercent)}</td>
+                    <td class="r hide-sm">${usd(r.valueUsd)}</td>
+                    <td class="r hide-sm num">${count(r.shares)}</td></tr>`).join("")}
+            </tbody></table>`;
+    }
+
+    function renderChanges(c) {
+        const box = document.getElementById("changes");
+        box.className = "";
+        if (!c) {
+            box.innerHTML = '<p class="empty">비교할 앞 분기가 없습니다.</p>';
+            return;
+        }
+        const n = c.counts || {};
+        document.getElementById("changesNote").textContent =
+            `${quarter(c.period)}을 ${quarter(c.previousPeriod)}과 비교했습니다. 주식 수 기준이고 옵션은 뺐습니다. ` +
+            `새로 삼 ${n.NEW || 0} · 늘림 ${n.ADDED || 0} · 줄임 ${n.REDUCED || 0} · 다 팖 ${n.SOLD_OUT || 0}` +
+            (n.SPLIT ? ` · 분할 추정 ${n.SPLIT}(매수·매도로 안 셈)` : "");
+        if (c.changes.length === 0) {
+            box.innerHTML = '<p class="empty">바뀐 종목이 없습니다.</p>';
+            return;
+        }
+        box.innerHTML = `<table aria-labelledby="changes-title">
+            <thead><tr><th scope="col">변화</th><th scope="col">종목</th><th scope="col" class="r">주식 수</th>
+                <th scope="col" class="r hide-sm">비중 전 → 후</th></tr></thead>
+            <tbody>${c.changes.map(r => `
+                <tr><td>${kindTag(r.kind)}</td>
+                    <td>${security(r.ticker, r.name)}</td>
+                    <td class="r num ${KIND[r.kind] ? KIND[r.kind].cls : ""}">${r.kind === "NEW" ? "새로" : r.kind === "SOLD_OUT" ? "전부" : signedPct(r.sharesChangePercent)}</td>
+                    <td class="r hide-sm num">${pct(r.weightBefore)} → ${pct(r.weightNow)}</td></tr>`).join("")}
+            </tbody></table>`;
+    }
+})();
+</script>
+</body>
+</html>
