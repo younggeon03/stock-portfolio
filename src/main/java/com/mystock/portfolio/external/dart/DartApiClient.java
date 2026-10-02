@@ -122,6 +122,96 @@ public class DartApiClient {
     }
 
     /**
+     * 공시 검색. 배당결정처럼 거래소 공시(pblntf_ty=I)를 기간으로 찾는다. 한 번에 100건까지.
+     * 날짜 형식은 yyyyMMdd.
+     */
+    public List<DartDisclosureRow> disclosures(String corpCode, java.time.LocalDate from, java.time.LocalDate to,
+                                               String type) {
+        requireKey();
+        java.time.format.DateTimeFormatter f = java.time.format.DateTimeFormatter.BASIC_ISO_DATE;
+        DartDisclosureRow.Response response = dartRestClient.get()
+                .uri(uri -> uri.path("/api/list.json")
+                        .queryParam("crtfc_key", properties.apiKey())
+                        .queryParam("corp_code", corpCode)
+                        .queryParam("bgn_de", from.format(f))
+                        .queryParam("end_de", to.format(f))
+                        .queryParam("pblntf_ty", type)
+                        .queryParam("page_count", 100)
+                        .build())
+                .retrieve()
+                .body(DartDisclosureRow.Response.class);
+        if (response == null || STATUS_NO_DATA.equals(response.status())) {
+            return List.of();
+        }
+        if (!"000".equals(response.status())) {
+            throw new AppException("DART 오류 " + response.status() + ": " + response.message());
+        }
+        return response.list() == null ? List.of() : response.list();
+    }
+
+    /**
+     * 공시 본문을 태그를 걷어낸 글자로. ZIP 안의 XML(HTML 비슷한 문서) 한 개다.
+     * 오래된 공시는 EUC-KR 이라 문서 머리의 encoding 을 보고 읽는다.
+     */
+    public String documentText(String receiptNo) {
+        requireKey();
+        byte[] body = dartRestClient.get()
+                .uri(uri -> uri.path("/api/document.xml")
+                        .queryParam("crtfc_key", properties.apiKey())
+                        .queryParam("rcept_no", receiptNo)
+                        .build())
+                .retrieve()
+                .body(byte[].class);
+        if (body == null || body.length < 2 || body[0] != 'P' || body[1] != 'K') {
+            throw new AppException("DART 공시 본문을 받지 못했습니다: " + receiptNo);
+        }
+        try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(body))) {
+            ZipEntry entry = zip.getNextEntry();
+            if (entry == null) {
+                throw new AppException("DART 공시 본문 ZIP 이 비어 있습니다: " + receiptNo);
+            }
+            return flatten(decode(zip.readAllBytes()));
+        } catch (IOException e) {
+            throw new AppException("DART 공시 본문을 읽지 못했습니다: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 공시 문서의 글자 인코딩을 정한다.
+     *
+     * 문서 머리의 선언을 믿으면 안 된다. 2026년 공시도 머리에는 charset=euc-kr 이라고 적혀 있는데
+     * 실제 내용은 UTF-8 이다. 선언대로 EUC-KR 로 읽었더니 글자가 다 깨져 배당 공시가 하나도 안 읽혔다.
+     * 그래서 UTF-8 로 엄격하게 읽어 보고, UTF-8 로 맞지 않는 바이트가 있을 때만 EUC-KR 로 읽는다.
+     */
+    static String decode(byte[] bytes) {
+        try {
+            return java.nio.charset.StandardCharsets.UTF_8.newDecoder()
+                    .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+                    .decode(java.nio.ByteBuffer.wrap(bytes))
+                    .toString();
+        } catch (java.nio.charset.CharacterCodingException e) {
+            return new String(bytes, java.nio.charset.Charset.forName("EUC-KR"));
+        }
+    }
+
+    /**
+     * 태그를 걷어내고 공백을 하나로. 표의 "칸 이름 값" 이 한 줄로 이어진다.
+     *
+     * 공시 문서에는 줄바꿈 없는 공백(NBSP, U+00A0)이 섞여 있다. 자바의 \s 는 이걸 공백으로 안 본다
+     * (자바스크립트는 본다). 그래서 처음엔 실제 공시가 하나도 안 읽혔다. 유니코드 공백을 전부 보통 공백으로 바꾼다.
+     */
+    static String flatten(String html) {
+        return html.replaceAll("(?s)<[^>]+>", " ")
+                .replace("&nbsp;", " ").replace("&#160;", " ")
+                .replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+                .replaceAll("(?U)\\s+", " ")
+                .replace(' ', ' ')
+                .replaceAll(" +", " ")
+                .strip();
+    }
+
+    /**
      * 고유번호 파일을 받아 상장사만 골라낸다.
      *
      * 성공하면 ZIP 이 오고, 실패하면(키 오류 등) ZIP 이 아니라 XML 오류문이 온다.
