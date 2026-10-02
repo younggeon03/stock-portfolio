@@ -92,6 +92,15 @@
         </dependency>
 
         <!--
+            로그인. 공개 기능(기관 포트폴리오 등)은 누구나, 내 잔고와 유료 버튼은 나만.
+            서버에 올리면 주소만 알면 누구나 내 계좌를 보고 클로드 비용을 쓰게 할 수 있어서 붙였다.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!--
             운영 상태를 바깥에 알리는 주소 (/actuator/health, /actuator/prometheus).
             자동 배포가 "새 버전이 제대로 떴나" 를 판단하는 근거가 health 이고,
             Prometheus 가 호출 수·응답 시간을 긁어가는 곳이 prometheus 다.
@@ -110,6 +119,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
 

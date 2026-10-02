@@ -1,5 +1,17 @@
 server:
   port: 8080
+  # 서버에서는 앞단(Caddy)이 HTTPS 를 받고 HTTP 로 넘긴다. 원래 요청이 https 였다는 헤더를 믿어야
+  # 로그인 뒤 돌아가는 주소가 http 로 바뀌지 않는다
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      timeout: 12h
+      cookie:
+        # 다른 사이트에서 온 요청에는 로그인 쿠키를 아예 안 붙인다. CSRF 를 한 겹 더 막는다
+        same-site: strict
+        http-only: true
+        # HTTPS 뒤에서는 true. 내 PC(http)에서 true 면 로그인이 안 된다
+        secure: ${COOKIE_SECURE:false}
 
 # 운영 상태 주소. 앱 포트(8080)와 나눠 관리 포트에만 연다.
 # 서버에서는 8080 만 바깥에 열고 8081 은 안쪽(자동 배포의 헬스체크, Prometheus)에서만 부른다.
@@ -29,6 +41,11 @@ management:
 # 만드는 법은 .env.example 7번. 키를 바꾸면 저장된 토큰을 못 풀어 한 번씩 새로 발급받는다.
 security:
   token-encryption-key: ${TOKEN_ENCRYPTION_KEY:}
+  # 내 영역(잔고·유료 버튼) 로그인. 비밀번호가 비면 전부 열어 두고 기동 때 경고한다 (내 PC 개발용).
+  # 서버에서는 반드시 넣는다
+  owner:
+    username: ${OWNER_USERNAME:owner}
+    password: ${OWNER_PASSWORD:}
 
 # Swagger. 서버에서는 SWAGGER_ENABLED=false 로 끈다. 주소 목록이 공격 지도가 되기 때문이다.
 springdoc:
