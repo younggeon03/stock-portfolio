@@ -31,8 +31,9 @@ a:hover { color: var(--ink); }
 .wrap { max-width: 1080px; margin: 0 auto; padding: var(--s-6) var(--s-5) var(--s-7); }
 
 /* ── 머리말 ── */
-.site-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-4);
-             flex-wrap: wrap; padding-bottom: var(--s-4); border-bottom: 1px solid var(--rule-2); }
+/* 메뉴 버튼(nav.js 가 넣음) + 이름. 메뉴는 왼쪽 사이드바에 있다 */
+.site-head { display: flex; align-items: center; gap: var(--s-2);
+             padding-bottom: var(--s-4); border-bottom: 1px solid var(--rule-2); }
 .site-head .brand { font-size: 15px; font-weight: 700; color: var(--ink); text-decoration: none; }
 .site-head nav { display: flex; gap: var(--s-4); font-size: 13px; }
 .site-head nav a { text-decoration: none; color: var(--ink-3); }

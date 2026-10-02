@@ -19,6 +19,7 @@
     <!-- 공용 토큰(색·간격·글자)이 먼저, 이 화면 스타일이 다음. 순서가 바뀌면 변수가 비어 화면이 깨진다 -->
     <link rel="stylesheet" href="/public/tokens.css">
     <link rel="stylesheet" href="/portfolio.css">
+    <link rel="stylesheet" href="/public/nav.css">
 
     <!--
       TradingView 의 캔들차트 라이브러리.
@@ -32,9 +33,12 @@
 <div class="wrap">
 
     <header class="topbar">
-        <div>
-            <h1>내 포트폴리오</h1>
-            <p class="sub">토스증권과 나무증권을 합쳐서 봅니다</p>
+        <!-- 왼쪽 사이드바를 여는 버튼은 nav.js 가 이 자리에 넣는다 -->
+        <div class="topbar-title" data-nav-slot>
+            <div>
+                <h1>내 포트폴리오</h1>
+                <p class="sub">토스증권과 나무증권을 합쳐서 봅니다</p>
+            </div>
         </div>
         <div class="topbar-actions">
             <button data-scope="ALL" class="scope primary">전체</button>
@@ -42,7 +46,6 @@
             <button data-scope="NAMUH" class="scope">나무</button>
             <button id="refreshBtn" title="다시 불러오기">새로고침</button>
             <button id="shotBtn">스크린샷으로 추가</button>
-            <a href="/" class="topbar-link">기관 포트폴리오</a>
             <button id="logoutBtn" hidden>로그아웃</button>
         </div>
     </header>
@@ -187,5 +190,6 @@
 </div>
 
 <script src="/portfolio.js"></script>
+<script src="/public/nav.js"></script>
 </body>
 </html>

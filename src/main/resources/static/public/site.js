@@ -3,26 +3,6 @@
  * 바깥에서 온 글자(회사 이름 등)는 항상 esc() 를 거쳐 넣는다.
  */
 
-/*
- * 운영자에게만 "내 포트폴리오" 링크를 메뉴에 붙인다.
- * /api/me 는 로그인했거나 내 PC 개발 모드(비밀번호 없음)일 때만 200 이다. 다른 사람에게는 401 이라 링크가 안 생긴다.
- * 첫 화면이 공개 화면으로 바뀌면서 내 잔고 화면(/portfolio.html)으로 가는 길이 없어졌던 걸 메운다.
- */
-document.addEventListener("DOMContentLoaded", () => {
-    const nav = document.querySelector(".site-head nav");
-    if (!nav) return;
-    fetch("/api/me", { headers: { "Accept": "application/json" } })
-        .then(r => r.ok ? r.json() : null)
-        .then(me => {
-            if (!me) return;
-            const a = document.createElement("a");
-            a.href = "/portfolio.html";
-            a.textContent = "내 포트폴리오";
-            nav.appendChild(a);
-        })
-        .catch(() => {});
-});
-
 function esc(text) {
     if (text === null || text === undefined) return "";
     return String(text)
