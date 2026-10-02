@@ -63,6 +63,15 @@ public class SecurityConfig {
 
     private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
+    /** 화면이 읽는 바깥 출처는 jsdelivr(글꼴 Pretendard, 차트 라이브러리) 하나다 */
+    static final String CSP = "default-src 'self'; "
+            + "script-src 'self' https://cdn.jsdelivr.net; "
+            + "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            + "font-src 'self' https://cdn.jsdelivr.net data:; "
+            + "img-src 'self' data:; "
+            + "connect-src 'self'; "
+            + "frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
+
     private final String username;
     private final String password;
 
@@ -82,7 +91,16 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
-                .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class);
+                .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
+                // 보안 헤더. 스크립트는 우리 서버와 글꼴·차트 CDN(jsdelivr)에서 온 파일만 실행한다.
+                // 인라인 스크립트를 막으려고 화면 코드를 전부 .js 파일로 뺐다. 스타일은 JS 가 넣는 width 같은
+                // style 속성 때문에 인라인을 허용한다(스크립트보다 위험이 훨씬 작다).
+                .headers(h -> h
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(CSP))
+                        .referrerPolicy(r -> r.policy(
+                                org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter
+                                        .ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                        .permissionsPolicy(p -> p.policy("camera=(), microphone=(), geolocation=(), payment=()")));
 
         if (!loginRequired()) {
             log.warn("OWNER_PASSWORD 가 없어 로그인 없이 전부 열어 둡니다. 서버에서는 반드시 넣으세요 (docs/운영.md)");
@@ -95,12 +113,14 @@ public class SecurityConfig {
                         .requestMatchers("/api/institutions/sync").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/institutions", "/api/institutions/**").permitAll()
                         .requestMatchers("/api/public/**", "/feeds/**").permitAll()
-                        .requestMatchers("/", "/index.html", "/public/**", "/robots.txt", "/favicon.ico",
-                                "/error", "/login").permitAll()
+                        .requestMatchers("/", "/index.html", "/public/**", "/robots.txt", "/sitemap.xml",
+                                "/favicon.ico", "/error", "/login").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info",
                                 "/actuator/prometheus").permitAll()
                         .anyRequest().authenticated())
-                .formLogin(form -> form.defaultSuccessUrl("/portfolio.html", false))
+                // 로그인 화면은 우리 디자인의 정적 화면. 스프링 기본 화면은 바깥 스타일을 불러 보안 정책에 막힌다
+                .formLogin(form -> form.loginPage("/public/login.html").loginProcessingUrl("/login")
+                        .failureUrl("/public/login.html?error").defaultSuccessUrl("/portfolio.html", false))
                 .logout(logout -> logout.logoutSuccessUrl("/"))
                 // API 는 로그인 화면으로 넘기지 않고 401 을 준다. fetch 는 넘겨받은 HTML 을 JSON 으로 못 읽는다
                 .exceptionHandling(e -> e.defaultAuthenticationEntryPointFor(

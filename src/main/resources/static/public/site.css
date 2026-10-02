@@ -95,6 +95,12 @@ textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, Consol
            background: var(--bg); color: var(--ink); resize: vertical; }
 code { font-size: 12.5px; background: var(--bg-sunken); padding: 1px 5px; border-radius: 4px; }
 
+.login-form { max-width: 320px; margin-top: var(--s-5); display: flex; flex-direction: column; gap: var(--s-2); }
+.login-form label { font-size: 13px; color: var(--ink-2); margin-top: var(--s-2); }
+.login-form input { font: inherit; font-size: 14px; padding: 9px 12px; border: 1px solid var(--rule-2);
+                    border-radius: var(--r-1); background: var(--bg); color: var(--ink); }
+.login-form button { margin-top: var(--s-3); align-self: flex-start; }
+
 .notice { font-size: var(--read-sm); color: var(--warn-ink); background: var(--warn-bg); border: 1px solid var(--warn-line);
           border-radius: var(--r-1); padding: var(--s-2) var(--s-3); max-width: var(--measure); }
 .loading, .empty { color: var(--ink-3); padding: var(--s-5) 0; }
