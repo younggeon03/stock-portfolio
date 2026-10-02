@@ -54,6 +54,10 @@
             <li><b>${count(h.holdings.length)}</b>보유 줄</li>
             <li><b>${top10.toFixed(1)}%</b>상위 10종목 비중</li>`;
 
+        // 분기를 바꾸면 그림도 그 분기로. 옵션만 있는 분기처럼 그릴 게 없으면 감춘다
+        document.getElementById("figure").hidden = !drawTreemap(document.getElementById("treemap"), h.holdings, inst.nameKo);
+        document.getElementById("figureCaption").textContent = "비중 · " + quarter(h.period);
+
         renderHoldings(h.holdings);
         renderChanges(await getJson(`/api/institutions/${cik}/changes${q}`).catch(() => null));
     }

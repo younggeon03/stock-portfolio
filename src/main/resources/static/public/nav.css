@@ -6,7 +6,7 @@
 
 .nav-toggle {
     display: inline-flex; flex-direction: column; justify-content: center; gap: 4px;
-    width: 36px; height: 36px; padding: 0 9px; margin-right: var(--s-3);
+    width: 40px; height: 40px; padding: 0 11px; margin-right: var(--s-3);
     border: 1px solid var(--rule-2); border-radius: var(--r-1); background: var(--bg); cursor: pointer;
     flex: none; vertical-align: middle;
 }
@@ -22,15 +22,14 @@
     width: min(300px, 86vw); background: var(--bg-raised); border-right: 1px solid var(--rule-2);
     box-shadow: var(--shadow-float); transform: translateX(-102%);
     transition: transform 0.24s var(--ease-out); display: flex; flex-direction: column;
-    font-family: Pretendard, "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
-                 "Segoe UI", "Malgun Gothic", sans-serif;
+    font-family: var(--font-sans);
 }
 .nav-open .site-nav { transform: none; }
 .nav-open .site-nav-backdrop { opacity: 1; pointer-events: auto; }
 
 .site-nav-head { display: flex; align-items: center; justify-content: space-between;
                  padding: var(--s-4) var(--s-4) var(--s-3); border-bottom: 1px solid var(--rule); }
-.site-nav-brand { font-size: 15px; font-weight: 700; color: var(--ink); text-decoration: none; }
+.site-nav-brand { font-family: var(--font-serif); font-size: 17px; font-weight: 700; color: var(--ink); text-decoration: none; }
 .site-nav-close { border: 0; background: none; font-size: 24px; line-height: 1; color: var(--ink-3);
                   cursor: pointer; padding: 4px 8px; border-radius: var(--r-1); }
 .site-nav-close:hover { color: var(--ink); background: var(--bg-sunken); }

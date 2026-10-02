@@ -8,19 +8,25 @@
 :root {
     color-scheme: light dark;
 
-    /* 바탕과 글자 */
-    --bg: #ffffff;
-    --bg-sunken: #f4f6f8;      /* 머리글, 호버, 막대 바닥 */
-    --bg-raised: #ffffff;      /* 실제로 떠 있는 것 */
-    --ink: #0f1216;
-    --ink-2: #1c2128;          /* 본문. 한글은 획이 많아 같은 대비에서도 흐리게 보인다. 거의 검정이다 */
-    --ink-3: #6b7480;          /* 라벨, 단위, 꺼진 값. 흰 바탕에서 4.5:1 을 넘겨야 한다 */
-    --rule: #e9ebef;           /* 줄 사이 */
-    --rule-2: #d6dae0;         /* 구역 사이 */
+    /*
+     * 바탕과 글자. 2026-10 "브리핑" 방향으로 개편했다.
+     * 순백 대신 종이색을 쓴다. 숫자 화면이 아니라 읽는 화면이라는 신호이고, 긴 글에서 눈이 덜 부시다.
+     */
+    --bg: #f6f5f1;
+    --bg-sunken: #ecebe5;      /* 머리글, 호버, 막대 바닥 */
+    --bg-raised: #fbfaf7;      /* 실제로 떠 있는 것 */
+    --ink: #1a1c20;
+    --ink-2: #2b2e33;          /* 본문. 한글은 획이 많아 같은 대비에서도 흐리게 보인다. 거의 검정이다 */
+    --ink-3: #5d6168;          /* 라벨, 단위, 꺼진 값. 종이색과 가라앉은 바탕 둘 다에서 4.5:1 을 넘긴다 */
+    --rule: #e3e0d7;           /* 줄 사이 */
+    --rule-2: #cfcabd;         /* 구역 사이 */
 
-    /* ★ 데이터 색. 이 둘은 항상 등락만 뜻한다 */
-    --rise: #e03131;
-    --fall: #1b64da;
+    /*
+     * ★ 데이터 색. 이 둘은 항상 등락만 뜻한다.
+     * 흰 바탕용 #e03131 은 종이색 위에서 4.5:1 아래로 떨어져 한 단계 어둡게 잡았다.
+     */
+    --rise: #c92a2a;
+    --fall: #1b5fd0;
     --rise-soft: #fdecec;
     --fall-soft: #eaf1fd;
 
@@ -73,6 +79,14 @@
      */
     --measure: 630px;
 
+    /*
+     * 글꼴. 제목만 명조다. 본문·표·숫자는 고딕(Pretendard) 그대로 둔다.
+     * 명조는 크게 쓸 때만 읽히고, 표의 작은 숫자에 쓰면 가는 획이 흐려진다.
+     */
+    --font-sans: Pretendard, "Pretendard Variable", -apple-system, BlinkMacSystemFont,
+                 "Apple SD Gothic Neo", "Segoe UI", "Malgun Gothic", sans-serif;
+    --font-serif: "Noto Serif KR", "Nanum Myeongjo", serif;
+
 }
 
 /*
@@ -82,14 +96,15 @@
  */
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg: #0f1114;
-        --bg-sunken: #171a1f;
-        --bg-raised: #191d22;
-        --ink: #e8eaed;
-        --ink-2: #dde3ea;
-        --ink-3: #939ca8;
-        --rule: #24282e;
-        --rule-2: #333941;
+        /* 푸른 회색 대신 따뜻한 검정. 밝은 화면의 종이색과 짝을 맞춘다 */
+        --bg: #141413;
+        --bg-sunken: #1d1d1b;
+        --bg-raised: #20201e;
+        --ink: #ecebe6;
+        --ink-2: #dedcd5;
+        --ink-3: #a3a198;
+        --rule: #2b2b28;
+        --rule-2: #3d3c38;
 
         --rise: #ff6b6b;
         --fall: #74a8ff;

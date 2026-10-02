@@ -1,6 +1,7 @@
 /*
- * 공개 화면 스타일 (/, /public/institution.html).
- * 토큰은 tokens.css. 규칙은 내 화면과 같다: 빨강·파랑은 등락(여기서는 주식 수 증가·감소)만,
+ * 공개 화면 스타일 (/, /public/*). 토큰은 tokens.css.
+ * 2026-10 "브리핑" 방향: 종이색 바탕, 큰 제목만 명조, 표와 숫자는 고딕.
+ * 규칙은 내 화면과 같다: 빨강·파랑은 등락(여기서는 주식 수 증가·감소)만, 강조는 검정,
  * 상자 대신 선과 여백, 숫자는 자릿수를 맞춘다.
  */
 
@@ -10,8 +11,7 @@ body {
     margin: 0;
     background: var(--bg);
     color: var(--ink);
-    font-family: Pretendard, "Pretendard Variable", -apple-system, BlinkMacSystemFont,
-                 "Apple SD Gothic Neo", "Segoe UI", "Malgun Gothic", sans-serif;
+    font-family: var(--font-sans);
     font-size: 14px;
     line-height: 1.6;
     letter-spacing: -0.005em;
@@ -28,28 +28,34 @@ a:hover { color: var(--ink); }
 .skip { position: absolute; left: -9999px; }
 .skip:focus { left: var(--s-4); top: var(--s-4); background: var(--bg); padding: var(--s-2) var(--s-3); z-index: 10; }
 
-.wrap { max-width: 1080px; margin: 0 auto; padding: var(--s-6) var(--s-5) var(--s-7); }
+.wrap { max-width: 1120px; margin: 0 auto; padding: var(--s-5) var(--s-6) var(--s-7); }
 
 /* ── 머리말 ── */
-/* 메뉴 버튼(nav.js 가 넣음) + 이름. 메뉴는 왼쪽 사이드바에 있다 */
+/* 메뉴 버튼(nav.js 가 넣음) + 이름 + 오른쪽의 짧은 설명. 메뉴는 왼쪽 사이드바에 있다 */
 .site-head { display: flex; align-items: center; gap: var(--s-2);
              padding-bottom: var(--s-4); border-bottom: 1px solid var(--rule-2); }
-.site-head .brand { font-size: 15px; font-weight: 700; color: var(--ink); text-decoration: none; }
-.site-head nav { display: flex; gap: var(--s-4); font-size: 13px; }
-.site-head nav a { text-decoration: none; color: var(--ink-3); }
-.site-head nav a[aria-current="page"] { color: var(--ink); font-weight: 600; }
+.site-head .brand { font-family: var(--font-serif); font-size: 18px; font-weight: 700;
+                    color: var(--ink); text-decoration: none; letter-spacing: -0.01em; }
+.site-head .edition { margin-left: auto; font-size: 13px; color: var(--ink-3); }
 
-h1 { font-size: 26px; line-height: 1.35; margin: var(--s-6) 0 var(--s-2); letter-spacing: -0.02em; }
+/* 제목만 명조. 작은 제목(h3 이하)은 고딕이 더 잘 읽힌다 */
+/* 한글은 어절 중간에서 줄을 바꾸면 "주식/을" 처럼 조사가 떨어진다. 제목과 첫 문단은 어절 단위로만 끊는다 */
+h1, h2 { font-family: var(--font-serif); font-weight: 700; word-break: keep-all; }
+.lead, .brief-cols p { word-break: keep-all; }
+h1 { font-size: 34px; line-height: 1.35; margin: var(--s-7) 0 var(--s-3); letter-spacing: -0.025em; }
+h2 { font-size: 22px; line-height: 1.4; margin: var(--s-7) 0 var(--s-2); letter-spacing: -0.015em; }
+.kicker { display: block; font-size: 13px; font-weight: 600; color: var(--ink-3); margin-bottom: var(--s-2); }
 .lead { font-size: var(--read); line-height: var(--read-lead); color: var(--ink-2); max-width: var(--measure); margin: 0; }
-h2 { font-size: 17px; margin: var(--s-7) 0 var(--s-2); letter-spacing: -0.01em; }
 .section-note { font-size: var(--read-sm); color: var(--ink-3); margin: 0 0 var(--s-4); max-width: var(--measure); }
 
 /* ── 표 ── */
 table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 caption { text-align: left; font-size: var(--read-sm); color: var(--ink-3); padding-bottom: var(--s-2); }
 th { text-align: left; font-weight: 500; font-size: 12px; color: var(--ink-3);
-     padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--rule-2); white-space: nowrap; }
+     padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--ink); white-space: nowrap; }
 td { padding: 11px var(--s-3); border-bottom: 1px solid var(--rule); vertical-align: middle; }
+th:first-child, td:first-child { padding-left: 0; }
+th:last-child, td:last-child { padding-right: 0; }
 th.r, td.r { text-align: right; }
 tbody tr:hover { background: var(--bg-sunken); }
 /* 가라앉은 바탕 위의 흐린 글자는 대비가 모자란다(CLAUDE.md). 마우스를 올린 줄에서는 한 단계 진하게 */
@@ -68,55 +74,140 @@ td .sub { display: block; font-size: 12px; color: var(--ink-3); }
 /* 변화 종류 글자 */
 .kind { font-size: 12px; font-weight: 600; white-space: nowrap; }
 
-/* 요약 숫자 줄 */
-.facts { display: flex; flex-wrap: wrap; gap: var(--s-5); margin: var(--s-5) 0 0; padding: 0; list-style: none; }
+/* 요약 숫자 줄. 위에 굵은 선을 둘러 신문의 "숫자 상자" 처럼 */
+.facts { display: flex; flex-wrap: wrap; gap: var(--s-6); margin: var(--s-5) 0 0; padding: var(--s-4) 0 0;
+         list-style: none; border-top: 2px solid var(--ink); }
 .facts li { font-size: 12px; color: var(--ink-3); }
-.facts b { display: block; font-size: 20px; color: var(--ink); font-weight: 650; font-variant-numeric: tabular-nums; }
+.facts b { display: block; font-size: 22px; color: var(--ink); font-weight: 650; font-variant-numeric: tabular-nums;
+           letter-spacing: -0.01em; }
 
 /* 기간 고르기 */
 .controls { display: flex; gap: var(--s-3); align-items: center; margin: var(--s-4) 0; flex-wrap: wrap; font-size: 13px; }
-select { font: inherit; font-size: 13px; padding: 6px 10px; border: 1px solid var(--rule-2); border-radius: var(--r-1);
-         background: var(--bg); color: var(--ink-2); }
+select { font: inherit; font-size: 13px; padding: 6px 10px; min-height: 36px; border: 1px solid var(--rule-2);
+         border-radius: var(--r-1); background: var(--bg-raised); color: var(--ink-2); }
 
 /* 버튼 — 내 화면과 같은 규칙: 색 없이, 강조는 검정 */
-button { font: inherit; font-size: 13px; font-weight: 500; padding: 7px 14px; border: 1px solid var(--rule-2);
-         border-radius: var(--r-1); background: var(--bg); color: var(--ink-2); cursor: pointer; }
+button { font: inherit; font-size: 13px; font-weight: 500; padding: 7px 14px; min-height: 36px;
+         border: 1px solid var(--rule-2); border-radius: var(--r-1); background: var(--bg-raised);
+         color: var(--ink-2); cursor: pointer; }
 button:hover { background: var(--bg-sunken); color: var(--ink); }
 button.primary { background: var(--ink); border-color: var(--ink); color: var(--bg); font-weight: 600; }
 button.primary:hover { opacity: 0.88; background: var(--ink); color: var(--bg); }
 /* 표 안에서 다른 걸 펼치는 버튼. 링크처럼 보이되 키보드로 눌린다 */
-button.linkish { border: 0; padding: 0; background: none; color: var(--ink-2); text-decoration: underline;
+button.linkish { border: 0; padding: 0; min-height: 0; background: none; color: var(--ink-2); text-decoration: underline;
                  text-underline-offset: 3px; font-weight: 500; }
 button.linkish:hover { background: none; color: var(--ink); }
+/* 링크지만 다음 행동을 부르는 곳. 검정 버튼 모양 */
+.cta { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: var(--r-1);
+       background: var(--ink); color: var(--bg); text-decoration: none; font-size: 14px; font-weight: 600; }
+.cta:hover { color: var(--bg); opacity: 0.88; }
 
 .overlap-form { margin-top: var(--s-5); max-width: var(--measure); }
 .overlap-form label { display: block; font-size: 13px; color: var(--ink-2); margin-bottom: var(--s-2); }
 textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px;
            padding: var(--s-3); border: 1px solid var(--rule-2); border-radius: var(--r-1);
-           background: var(--bg); color: var(--ink); resize: vertical; }
+           background: var(--bg-raised); color: var(--ink); resize: vertical; }
 code { font-size: 12.5px; background: var(--bg-sunken); padding: 1px 5px; border-radius: 4px; }
 
 .login-form { max-width: 320px; margin-top: var(--s-5); display: flex; flex-direction: column; gap: var(--s-2); }
 .login-form label { font-size: 13px; color: var(--ink-2); margin-top: var(--s-2); }
-.login-form input { font: inherit; font-size: 14px; padding: 9px 12px; border: 1px solid var(--rule-2);
-                    border-radius: var(--r-1); background: var(--bg); color: var(--ink); }
-.login-form button { margin-top: var(--s-3); align-self: flex-start; }
+.login-form input { font: inherit; font-size: 14px; padding: 9px 12px; min-height: 44px; border: 1px solid var(--rule-2);
+                    border-radius: var(--r-1); background: var(--bg-raised); color: var(--ink); }
+.login-form button { margin-top: var(--s-3); align-self: flex-start; min-height: 44px; }
 
 .notice { font-size: var(--read-sm); color: var(--warn-ink); background: var(--warn-bg); border: 1px solid var(--warn-line);
           border-radius: var(--r-1); padding: var(--s-2) var(--s-3); max-width: var(--measure); }
 .loading, .empty { color: var(--ink-3); padding: var(--s-5) 0; }
 .error { color: var(--bad-ink); }
 
+/* ══ 첫 화면 브리핑 ══ */
+
+/* 한 줄 요약(왼쪽) + 대표 기관 비중 그림(오른쪽) */
+.brief { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: var(--s-7); align-items: end;
+         margin-top: var(--s-7); }
+.brief h1 { margin-top: 0; font-size: 38px; line-height: 1.32; }
+.brief .lead { font-size: 16px; }
+.brief-figure { margin: 0; }
+.brief-figure figcaption { font-size: 13px; font-weight: 600; color: var(--ink-3); margin-bottom: var(--s-2); }
+.brief-figure figcaption a { color: inherit; }
+
+/*
+ * 비중 트리맵. 칸 크기가 비중이고, 칸의 명도가 순위다(색은 등락 전용이라 못 쓴다).
+ * 칸 위치는 home.js 가 계산해서 % 로 넣는다. 화면 폭이 바뀌어도 JS 가 다시 그릴 필요가 없다.
+ * 글자색: 진한 칸(1~3위)은 바탕색, 옅은 칸은 잉크색. 어두운 화면에서는 seg 명도가 뒤집혀서
+ * 같은 규칙이 그대로 맞는다.
+ */
+.treemap { position: relative; height: 240px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.treemap .cell { position: absolute; overflow: hidden; padding: 8px 9px; border: 1.5px solid var(--bg);
+                 display: flex; flex-direction: column; justify-content: space-between; line-height: 1.3; }
+.treemap .cell b { font-weight: 600; }
+.treemap .t1 { background: var(--seg-1); color: var(--bg); }
+.treemap .t2 { background: var(--seg-2); color: var(--bg); }
+.treemap .t3 { background: var(--seg-3); color: var(--bg); }
+.treemap .t4 { background: var(--seg-5); color: var(--ink); }
+.treemap .t5 { background: var(--seg-6); color: var(--ink); }
+.treemap .t6 { background: var(--seg-7); color: var(--ink); }
+.treemap .t1 b { font-size: 15px; }
+
+/* 굵은 선 아래 세 칸. 신문 1면의 단 나눔 */
+.brief-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-6);
+              margin-top: var(--s-7); padding-top: var(--s-5); border-top: 2px solid var(--ink); }
+.brief-cols article { display: flex; flex-direction: column; gap: var(--s-3); min-width: 0; }
+.brief-cols h2 { margin: 0; font-family: var(--font-serif); font-size: 22px; line-height: 1.4; letter-spacing: -0.01em; }
+.brief-cols p { margin: 0; font-size: 14px; line-height: 1.8; color: var(--ink-2); }
+.brief-cols .foot { font-size: 12px; color: var(--ink-3); }
+.brief-cols .cta { align-self: flex-start; }
+
+/* 증감 막대. 막대 색이 곧 늘었다/줄었다 */
+.changebars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-3); }
+.changebars li { display: grid; grid-template-columns: 60px minmax(0, 1fr) 64px; align-items: center; gap: var(--s-3);
+                 font-size: 14px; font-variant-numeric: tabular-nums; }
+.changebars .track { height: 8px; background: var(--bg-sunken); }
+.changebars .track i { display: block; height: 100%; }
+.changebars .rise i { background: var(--rise); }
+.changebars .fall i { background: var(--fall); }
+.changebars .v { text-align: right; font-weight: 600; }
+
+/* 기관 목록. 표 대신 다섯 칸 격자 — 고르는 화면이지 비교하는 화면이 아니다 */
+.inst-grid { list-style: none; margin: 0; padding: 0; display: grid;
+             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); border-top: 1px solid var(--ink); }
+.inst-grid li { border-bottom: 1px solid var(--rule-2); }
+.inst-grid a { display: flex; flex-direction: column; gap: 2px; padding: var(--s-4) var(--s-4) var(--s-4) 0;
+               text-decoration: none; min-height: 100%; }
+.inst-grid a:hover { background: var(--bg-sunken); }
+.inst-grid a:hover .sub { color: var(--ink-2); }
+.inst-grid b { font-size: 15px; color: var(--ink); }
+.inst-grid .sub { font-size: 12px; color: var(--ink-3); }
+.inst-grid .stat { font-size: 13px; color: var(--ink-2); margin-top: var(--s-2); font-variant-numeric: tabular-nums; }
+
 /* ── 꼬리말: 출처와 한계 ── */
 .site-foot { margin-top: var(--s-7); padding-top: var(--s-4); border-top: 1px solid var(--rule-2);
              font-size: var(--read-sm); color: var(--ink-3); line-height: 1.8; max-width: var(--measure); }
 .site-foot p { margin: 0 0 var(--s-2); }
 
+/* 중간 폭: 브리핑을 한 단으로 */
+@media (max-width: 960px) {
+    .brief { grid-template-columns: minmax(0, 1fr); gap: var(--s-5); }
+    .brief-cols { grid-template-columns: minmax(0, 1fr); gap: var(--s-6); }
+}
+
 /* 좁은 화면: 덜 중요한 열을 숨긴다. 가로 스크롤을 만들지 않는다 */
 @media (max-width: 700px) {
-    .wrap { padding: var(--s-5) var(--s-4) var(--s-6); }
-    h1 { font-size: 22px; }
+    .wrap { padding: var(--s-4) var(--s-4) var(--s-6); }
+    h1, .brief h1 { font-size: 26px; }
+    h2 { font-size: 20px; }
+    .site-head .edition { display: none; }
     .hide-sm { display: none; }
     td, th { padding-left: var(--s-2); padding-right: var(--s-2); }
     .bar { display: none; }
+    .treemap { height: 200px; }
+    .inst-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* 기관 상세: 제목이 짧아 첫 화면보다 작게 */
+.brief-detail h1 { font-size: 34px; }
+.brief-detail .notice { margin-top: var(--s-3); }
+
+/* 제목 위의 작은 머리표. 머리표가 있으면 위 여백을 머리표가 가져간다 */
+main > .kicker:first-child { margin-top: var(--s-7); }
+.kicker + h1 { margin-top: 0; }

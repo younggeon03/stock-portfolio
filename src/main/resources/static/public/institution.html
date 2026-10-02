@@ -8,6 +8,7 @@
     <meta property="og:type" content="website">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📈</text></svg>">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-kr@5.2.5/700.css">
     <link rel="stylesheet" href="/public/tokens.css">
     <link rel="stylesheet" href="/public/site.css">
     <link rel="stylesheet" href="/public/nav.css">
@@ -22,9 +23,18 @@
     </header>
 
     <main id="main">
-        <h1 id="title">불러오는 중…</h1>
-        <p class="lead" id="who"></p>
-        <p class="notice" id="note" hidden></p>
+        <section class="brief brief-detail">
+            <div>
+                <span class="kicker">기관 포트폴리오 · SEC 13F</span>
+                <h1 id="title">불러오는 중…</h1>
+                <p class="lead" id="who"></p>
+                <p class="notice" id="note" hidden></p>
+            </div>
+            <figure class="brief-figure" id="figure" hidden>
+                <figcaption id="figureCaption"></figcaption>
+                <div class="treemap" id="treemap"></div>
+            </figure>
+        </section>
         <ul class="facts" id="facts"></ul>
 
         <div class="controls">
