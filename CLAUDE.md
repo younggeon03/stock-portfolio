@@ -57,6 +57,7 @@ java -jar target/portfolio-0.0.1-SNAPSHOT.jar
 
 ## 화면을 고칠 때
 
+- **새 화면·기능은 `static/public/nav.js` 의 `MENU` 에 한 줄 넣어 사이드바에 붙입니다.** 화면 HTML 에는 메뉴를 쓰지 않고 `nav.css`·`nav.js` 만 부릅니다. 운영자 전용은 `owner: true`.
 - **색·간격 토큰은 `static/public/tokens.css` 한 곳에 있습니다.** 공개 화면과 내 화면이 같이 씁니다. `portfolio.css` 에 토큰을 다시 만들지 마세요.
 - 공개 화면을 고쳤으면 axe-core 로 밝은/어두운 × 첫 화면/기관 상세 + 모바일에서 위반 0 을 확인하세요.
 

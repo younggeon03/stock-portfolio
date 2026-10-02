@@ -97,6 +97,9 @@ a { color: var(--ink-2); text-underline-offset: 2px; }
 
 /* ══════════ 머리말 ══════════ */
 
+/* 사이드바 메뉴 버튼(nav.js 가 넣음) + 제목을 한 줄로 */
+.topbar-title { display: flex; align-items: center; }
+
 .topbar {
     display: flex; align-items: center; justify-content: space-between;
     gap: var(--s-4); flex-wrap: wrap;

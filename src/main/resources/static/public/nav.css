@@ -1,0 +1,60 @@
+/*
+ * 왼쪽 사이드바. 공개 화면과 내 포트폴리오가 같이 쓴다 (토큰은 tokens.css).
+ * 규칙은 다른 화면과 같다: 색 없이 명도로, 상자로 뜨는 건 실제로 떠 있는 것(이 바)뿐.
+ * 닫힌 바는 inert 로 Tab 을 막는다 (aria-hidden 은 Tab 을 못 막는다. CLAUDE.md).
+ */
+
+.nav-toggle {
+    display: inline-flex; flex-direction: column; justify-content: center; gap: 4px;
+    width: 36px; height: 36px; padding: 0 9px; margin-right: var(--s-3);
+    border: 1px solid var(--rule-2); border-radius: var(--r-1); background: var(--bg); cursor: pointer;
+    flex: none; vertical-align: middle;
+}
+.nav-toggle span { display: block; height: 2px; border-radius: 1px; background: var(--ink-2); }
+.nav-toggle:hover { background: var(--bg-sunken); }
+
+.site-nav-backdrop {
+    position: fixed; inset: 0; z-index: 1900; background: rgba(15, 18, 22, 0.32);
+    opacity: 0; pointer-events: none; transition: opacity 0.2s var(--ease);
+}
+.site-nav {
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 2000;
+    width: min(300px, 86vw); background: var(--bg-raised); border-right: 1px solid var(--rule-2);
+    box-shadow: var(--shadow-float); transform: translateX(-102%);
+    transition: transform 0.24s var(--ease-out); display: flex; flex-direction: column;
+    font-family: Pretendard, "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+                 "Segoe UI", "Malgun Gothic", sans-serif;
+}
+.nav-open .site-nav { transform: none; }
+.nav-open .site-nav-backdrop { opacity: 1; pointer-events: auto; }
+
+.site-nav-head { display: flex; align-items: center; justify-content: space-between;
+                 padding: var(--s-4) var(--s-4) var(--s-3); border-bottom: 1px solid var(--rule); }
+.site-nav-brand { font-size: 15px; font-weight: 700; color: var(--ink); text-decoration: none; }
+.site-nav-close { border: 0; background: none; font-size: 24px; line-height: 1; color: var(--ink-3);
+                  cursor: pointer; padding: 4px 8px; border-radius: var(--r-1); }
+.site-nav-close:hover { color: var(--ink); background: var(--bg-sunken); }
+
+.site-nav-list { list-style: none; margin: 0; padding: var(--s-3) var(--s-2); overflow-y: auto; flex: 1; }
+.nav-item + .nav-item { margin-top: var(--s-2); }
+.nav-main { display: block; padding: var(--s-2) var(--s-3); border-radius: var(--r-1); text-decoration: none; }
+.nav-main:hover { background: var(--bg-sunken); }
+.nav-label { display: block; font-size: 14.5px; font-weight: 650; color: var(--ink); }
+.nav-desc { display: block; font-size: 12px; color: var(--ink-3); margin-top: 1px; }
+.nav-main:hover .nav-desc { color: var(--ink-2); }  /* 가라앉은 바탕 위 흐린 글자는 대비 미달 */
+.nav-children { list-style: none; margin: 2px 0 0; padding: 0 0 0 var(--s-3); }
+.nav-sub { display: block; font-size: 13.5px; color: var(--ink-2); text-decoration: none;
+           padding: 6px var(--s-3); border-left: 2px solid var(--rule); }
+.nav-sub:hover { color: var(--ink); border-left-color: var(--ink-3); }
+
+/* 지금 있는 곳. 색이 아니라 굵기와 왼쪽 선으로 (색은 등락 전용) */
+.nav-main[aria-current="page"] { background: var(--bg-sunken); }
+.nav-main[aria-current="page"] .nav-desc { color: var(--ink-2); }
+.nav-sub[aria-current="page"] { color: var(--ink); font-weight: 650; border-left-color: var(--ink); }
+
+.site-nav-foot { margin: 0; padding: var(--s-3) var(--s-4) var(--s-4); font-size: 12px; color: var(--ink-3);
+                 border-top: 1px solid var(--rule); line-height: 1.6; }
+
+@media (prefers-reduced-motion: reduce) {
+    .site-nav, .site-nav-backdrop { transition: none; }
+}
