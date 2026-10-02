@@ -47,3 +47,9 @@ target/
 # archify 가 검사하며 남기는 부산물
 docs/diagrams/*.visual-check.*
 cp.txt
+
+# 운영 서버에서만 생기는 것 (deploy/ 를 내 PC 에서 리허설할 때 실수로 올리지 않게)
+deploy/.env
+deploy/backups/
+deploy/.deployed-tag
+deploy/.previous-tag

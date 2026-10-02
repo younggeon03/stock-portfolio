@@ -1,0 +1,71 @@
+# 운영 서버용. 개발용 ../docker-compose.yml 과 다른 점:
+#  - 이미지를 빌드하지 않고 ghcr.io 에서 받은 것을 쓴다 (deploy.sh 가 stock-portfolio:current 로 붙여 둠)
+#  - 앱 포트를 바깥에 열지 않는다. 바깥은 Caddy(80·443)만 받고 HTTPS 를 끝낸 뒤 앱에 넘긴다
+#  - DB 비밀번호에 기본값이 없다. 비어 있으면 띄우기 전에 멈춘다
+# 절차는 docs/운영.md 7장.
+
+services:
+  app:
+    # 태그를 여기 쓰지 않는다. 배포·롤백은 deploy.sh 가 이 이름이 가리키는 이미지를 바꿔서 한다.
+    # 그래야 백업 같은 다른 compose 명령이 실수로 다른 버전을 띄우지 않는다
+    image: stock-portfolio:current
+    pull_policy: never
+    env_file: .env
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/portfolio?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      DB_USERNAME: portfolio
+      DB_PASSWORD: ${COMPOSE_DB_PASSWORD:?.env 에 COMPOSE_DB_PASSWORD 를 넣으세요}
+    ports:
+      # 헬스체크·지표는 서버 안에서만. deploy.sh 가 여기를 보고 성공/롤백을 정한다
+      - "127.0.0.1:${MGMT_HOST_PORT:-8081}:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+    # 무료 서버 메모리(1~12GB)에서 다른 컨테이너를 밀어내지 않게. 힙은 이미지에서 512MB 로 묶었다
+    mem_limit: 900m
+    logging: &logging
+      driver: json-file
+      options: { max-size: "20m", max-file: "5" }   # 로그가 디스크를 채워 서버가 멈추는 걸 막는다
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: portfolio
+      MYSQL_USER: portfolio
+      MYSQL_PASSWORD: ${COMPOSE_DB_PASSWORD:?.env 에 COMPOSE_DB_PASSWORD 를 넣으세요}
+      MYSQL_ROOT_PASSWORD: ${COMPOSE_DB_ROOT_PASSWORD:?.env 에 COMPOSE_DB_ROOT_PASSWORD 를 넣으세요}
+      TZ: Asia/Seoul
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      # 비밀번호를 명령줄에 쓰지 않으려고 컨테이너 안의 환경변수를 쓴다
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+    logging: *logging
+
+  caddy:
+    image: caddy:2.8
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"   # HTTP/3
+    environment:
+      DOMAIN: "${DOMAIN:?.env 에 DOMAIN 을 넣으세요 (예 stock.example.com)}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # 발급받은 인증서. 지우면 다시 발급받는데 Let's Encrypt 는 주당 발급 횟수 제한이 있다
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [app]
+    restart: unless-stopped
+    logging: *logging
+
+volumes:
+  mysql-data:
+  caddy-data:
+  caddy-config:

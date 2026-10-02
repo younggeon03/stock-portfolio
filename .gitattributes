@@ -3,3 +3,5 @@
 mvnw text eol=lf
 *.sh text eol=lf
 mvnw.cmd text eol=crlf
+# 서버로 그대로 복사되는 파일. 윈도우에서 직접 scp 해도 LF 로 가게
+deploy/** text eol=lf
