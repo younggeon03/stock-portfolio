@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -85,6 +87,129 @@ public class InstitutionPortfolioService {
     }
 
     /**
+     * 한 기관의 분기 변화. period 와 그 바로 앞 분기(보유가 있는)를 비교한다.
+     * 앞 분기가 없으면(처음 받은 분기) 비어 있다.
+     */
+    public Optional<ChangesView> changes(long cik, LocalDate period) {
+        Optional<Institution> inst = institutions.findById(cik);
+        if (inst.isEmpty()) {
+            return Optional.empty();
+        }
+        List<Filing13F> fs = visible(cik);
+        int idx = period == null ? 0 : indexOf(fs, period);
+        if (idx < 0 || idx + 1 >= fs.size()) {
+            return Optional.empty();
+        }
+        Filing13F now = fs.get(idx);
+        Filing13F before = fs.get(idx + 1);
+        List<HoldingDiff.Change> all = HoldingDiff.diff(positions(now), positions(before));
+
+        Map<HoldingDiff.Kind, Long> counts = all.stream()
+                .collect(Collectors.groupingBy(HoldingDiff.Change::kind, Collectors.counting()));
+        List<HoldingDiff.Change> moved = all.stream().filter(c -> c.kind() != HoldingDiff.Kind.UNCHANGED).toList();
+        return Optional.of(new ChangesView(
+                InstitutionView.of(inst.get(), now, fs.stream().map(Filing13F::getReportPeriod).toList()),
+                now.getReportPeriod(), before.getReportPeriod(), counts, moved));
+    }
+
+    /**
+     * 여러 기관이 같은 분기에 같이 늘리거나 줄인 종목.
+     *
+     * period 가 없으면, 따라가는 기관의 절반 이상이 보유를 낸 가장 최근 분기를 쓴다.
+     * 13F 는 기관마다 내는 날이 달라서(마감 45일) 최신 분기는 몇 곳만 낸 상태일 수 있다.
+     * 몇 곳만으로 "여러 기관이 샀다" 고 하면 과장이다.
+     *
+     * 사실을 세기만 한다. "따라 사라" 는 뜻이 아니다. 13F 는 45일 늦은 자료다.
+     */
+    public ConsensusView consensus(LocalDate period, int limit) {
+        List<Institution> active = institutions.findByActiveTrueOrderBySortOrder();
+        Map<Long, List<Filing13F>> byInst = new LinkedHashMap<>();
+        active.forEach(i -> byInst.put(i.getCik(), visible(i.getCik())));
+
+        LocalDate target = period != null ? period : defaultConsensusPeriod(byInst.values(), active.size());
+        if (target == null) {
+            return new ConsensusView(null, 0, List.of(), List.of());
+        }
+
+        Map<String, ConsensusRow.Builder> rows = new LinkedHashMap<>();
+        int compared = 0;
+        for (Institution inst : active) {
+            List<Filing13F> fs = byInst.get(inst.getCik());
+            int idx = indexOf(fs, target);
+            if (idx < 0 || idx + 1 >= fs.size()) {
+                continue;
+            }
+            // 바로 앞 분기와 비교할 수 있어야 같은 석 달의 변화다. 노르웨이 중앙은행은 1·3분기가 비어 있어
+            // 2분기를 반년 전과 비교하게 되는데, 그걸 섞으면 "이번 분기에 같이 샀다" 가 틀린다
+            if (!fs.get(idx + 1).getReportPeriod().equals(previousQuarterEnd(target))) {
+                continue;
+            }
+            compared++;
+            for (HoldingDiff.Change c : HoldingDiff.diff(positions(fs.get(idx)), positions(fs.get(idx + 1)))) {
+                ConsensusRow.Builder b = rows.computeIfAbsent(c.cusip(),
+                        k -> new ConsensusRow.Builder(c.cusip(), c.ticker(), c.name()));
+                switch (c.kind()) {
+                    case NEW, ADDED -> b.buyers.add(inst.getNameKo());
+                    case REDUCED, SOLD_OUT -> b.sellers.add(inst.getNameKo());
+                    default -> { }
+                }
+            }
+        }
+
+        List<ConsensusRow> built = rows.values().stream().map(ConsensusRow.Builder::build).toList();
+        List<ConsensusRow> bought = built.stream()
+                .filter(r -> r.buyers().size() >= 2)
+                .sorted(Comparator.comparingInt((ConsensusRow r) -> r.buyers().size() - r.sellers().size()).reversed()
+                        .thenComparing(r -> -r.buyers().size()))
+                .limit(limit).toList();
+        List<ConsensusRow> sold = built.stream()
+                .filter(r -> r.sellers().size() >= 2)
+                .sorted(Comparator.comparingInt((ConsensusRow r) -> r.sellers().size() - r.buyers().size()).reversed()
+                        .thenComparing(r -> -r.sellers().size()))
+                .limit(limit).toList();
+        return new ConsensusView(target, compared, bought, sold);
+    }
+
+    /** 절반 이상이 낸 가장 최근 분기 */
+    static LocalDate defaultConsensusPeriod(java.util.Collection<List<Filing13F>> filingsPerInstitution, int total) {
+        Map<LocalDate, Integer> count = new java.util.TreeMap<>(Comparator.reverseOrder());
+        for (List<Filing13F> fs : filingsPerInstitution) {
+            fs.stream().map(Filing13F::getReportPeriod).distinct().forEach(p -> count.merge(p, 1, Integer::sum));
+        }
+        int need = Math.max(2, (total + 1) / 2);
+        return count.entrySet().stream().filter(e -> e.getValue() >= need).map(Map.Entry::getKey)
+                .findFirst().orElse(null);
+    }
+
+    /** 바로 앞 분기말. 2026-06-30 → 2026-03-31, 2026-03-31 → 2025-12-31 */
+    static LocalDate previousQuarterEnd(LocalDate quarterEnd) {
+        return quarterEnd.withDayOfMonth(1).minusMonths(2).minusDays(1);
+    }
+
+    private static int indexOf(List<Filing13F> fs, LocalDate period) {
+        for (int i = 0; i < fs.size(); i++) {
+            if (fs.get(i).getReportPeriod().equals(period)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /** 분기 하나의 주식 보유 (옵션 제외) */
+    private List<HoldingDiff.Position> positions(Filing13F filing) {
+        List<Holding13F> rows = holdings.findByAccessionNoOrderByValueUsdDesc(filing.getAccessionNo()).stream()
+                .filter(h -> h.getPutCall().isEmpty()).toList();
+        Map<String, CusipTicker> known = tickers.findAllById(rows.stream().map(Holding13F::getCusip).distinct().toList())
+                .stream().collect(Collectors.toMap(CusipTicker::getCusip, Function.identity()));
+        long total = filing.getTotalValueUsd();
+        return rows.stream().map(h -> {
+            CusipTicker t = known.get(h.getCusip());
+            return new HoldingDiff.Position(h.getCusip(), t == null ? null : t.getTicker(), h.getIssuerName(),
+                    h.getShares(), h.getValueUsd(), percent(h.getValueUsd(), total));
+        }).toList();
+    }
+
+    /**
      * 보유가 있는 분기만, 최신부터.
      * 비공개로 낸 빈 제출(노르웨이 중앙은행 1·3분기)을 "최신 분기" 로 고르면 보유가 텅 빈 화면이 된다
      */
@@ -115,6 +240,37 @@ public class InstitutionPortfolioService {
                     latest == null ? null : latest.getTotalValueUsd(),
                     latest == null ? null : latest.getHoldingCount(),
                     periods);
+        }
+    }
+
+    /** 한 기관의 분기 변화. counts 에는 그대로(UNCHANGED)도 세지만 changes 목록에는 바뀐 것만 */
+    public record ChangesView(InstitutionView institution, LocalDate period, LocalDate previousPeriod,
+                              Map<HoldingDiff.Kind, Long> counts, List<HoldingDiff.Change> changes) {
+    }
+
+    /** 여러 기관을 함께 본 결과. compared 는 이 분기와 앞 분기를 둘 다 낸 기관 수 */
+    public record ConsensusView(LocalDate period, int compared, List<ConsensusRow> bought, List<ConsensusRow> sold) {
+    }
+
+    /** 한 종목을 늘린 기관과 줄인 기관 */
+    public record ConsensusRow(String cusip, String ticker, String name, List<String> buyers, List<String> sellers) {
+
+        static final class Builder {
+            private final String cusip;
+            private final String ticker;
+            private final String name;
+            private final List<String> buyers = new java.util.ArrayList<>();
+            private final List<String> sellers = new java.util.ArrayList<>();
+
+            Builder(String cusip, String ticker, String name) {
+                this.cusip = cusip;
+                this.ticker = ticker;
+                this.name = name;
+            }
+
+            ConsensusRow build() {
+                return new ConsensusRow(cusip, ticker, name, List.copyOf(buyers), List.copyOf(sellers));
+            }
         }
     }
 
