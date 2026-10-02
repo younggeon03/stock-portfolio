@@ -1,0 +1,115 @@
+/*
+ * 공용 디자인 토큰. 공개 화면(/, /public/*)과 내 화면(portfolio.html)이 같이 쓴다.
+ * 내 화면 CSS 는 로그인 뒤에 있어서 공개 화면이 못 읽는다. 그렇다고 복사하면 둘이 어긋난다. 그래서 한 곳에 둔다.
+ * 규칙: 빨강·파랑은 등락만 뜻한다(결정기록 008). 버튼·장식에 색을 쓰지 않는다.
+ */
+
+
+:root {
+    color-scheme: light dark;
+
+    /* 바탕과 글자 */
+    --bg: #ffffff;
+    --bg-sunken: #f4f6f8;      /* 머리글, 호버, 막대 바닥 */
+    --bg-raised: #ffffff;      /* 실제로 떠 있는 것 */
+    --ink: #0f1216;
+    --ink-2: #1c2128;          /* 본문. 한글은 획이 많아 같은 대비에서도 흐리게 보인다. 거의 검정이다 */
+    --ink-3: #6b7480;          /* 라벨, 단위, 꺼진 값. 흰 바탕에서 4.5:1 을 넘겨야 한다 */
+    --rule: #e9ebef;           /* 줄 사이 */
+    --rule-2: #d6dae0;         /* 구역 사이 */
+
+    /* ★ 데이터 색. 이 둘은 항상 등락만 뜻한다 */
+    --rise: #e03131;
+    --fall: #1b64da;
+    --rise-soft: #fdecec;
+    --fall-soft: #eaf1fd;
+
+    /* 비중 스트립. 색이 아니라 명도로 순위를 보인다 */
+    --seg-1: #14181d;
+    --seg-2: #313842;
+    --seg-3: #4c5563;
+    --seg-4: #6b7482;
+    --seg-5: #8d95a1;
+    --seg-6: #b0b7c0;
+    --seg-7: #ccd1d8;
+
+    /* 알림 */
+    --warn-bg: #fff8e8;  --warn-line: #f3dfae;  --warn-ink: #7a5600;
+    --bad-bg: #fdeeee;   --bad-line: #f2c9c9;   --bad-ink: #b32626;
+    --ok-bg: #edf8f1;    --ok-line: #bae0c8;    --ok-ink: #22703a;
+
+    /* 모서리. 세 단계뿐이다. 전부 같은 값을 쓰면 위계가 사라진다 */
+    --r-1: 6px;    /* 버튼, 입력칸 */
+    --r-2: 10px;   /* 작은 덩어리 */
+    --r-3: 16px;   /* 떠 있는 판 */
+
+    /* 간격. 4의 배수로만 움직인다 */
+    --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px;
+    --s-5: 24px; --s-6: 32px; --s-7: 48px;
+
+    --shadow-float: 0 12px 32px -8px rgba(15, 18, 22, 0.18), 0 2px 8px -2px rgba(15, 18, 22, 0.08);
+    --shadow-side: -16px 0 48px -16px rgba(15, 18, 22, 0.16);
+    --shadow-up: 0 -12px 40px -12px rgba(15, 18, 22, 0.2);
+
+    --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+    --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+    --fast: 0.14s;
+
+    /*
+     * 읽는 면의 글자 크기.
+     *
+     * ★ 표와 본문은 밀도가 정반대여야 한다.
+     * 표는 숫자를 훑는 곳이라 조밀한 게 맞다. 분석 패널은 문장을 읽는 곳이다.
+     * 한글은 같은 크기의 로마자보다 획이 많아 12.5px 로는 문장이 안 읽힌다. 하한이 15px 이다.
+     */
+    --read: 15px;          /* 본문 */
+    --read-sm: 13px;       /* 각주, 출처, 면책 */
+    --read-lead: 1.9;      /* 한글은 줄 사이가 넉넉해야 다음 줄을 찾기 쉽다 */
+
+    /*
+     * 한 줄에 들어갈 글자 수의 상한.
+     * 한글은 35~45자가 편하다. 드로어를 넓게 끌어도 문장이 그 이상 늘어나면 안 된다.
+     * 42자 x 15px = 630px.
+     */
+    --measure: 630px;
+
+}
+
+/*
+ * 어두운 화면.
+ * ★ 등락 색을 그대로 쓰면 안 된다. #e03131 은 어두운 바탕에서 탁하게 죽는다.
+ * 밝기를 올려 같은 "빨강/파랑" 으로 읽히게 맞춘다.
+ */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #0f1114;
+        --bg-sunken: #171a1f;
+        --bg-raised: #191d22;
+        --ink: #e8eaed;
+        --ink-2: #dde3ea;
+        --ink-3: #939ca8;
+        --rule: #24282e;
+        --rule-2: #333941;
+
+        --rise: #ff6b6b;
+        --fall: #74a8ff;
+        --rise-soft: #2a1a1c;
+        --fall-soft: #16233a;
+
+        --seg-1: #e8eaed;
+        --seg-2: #b9bfc7;
+        --seg-3: #929aa4;
+        --seg-4: #737b86;
+        --seg-5: #59616b;
+        --seg-6: #434a53;
+        --seg-7: #333940;
+
+        --warn-bg: #2a2314;  --warn-line: #574722;  --warn-ink: #e8c877;
+        --bad-bg: #2a1718;   --bad-line: #57282a;   --bad-ink: #ff9b9b;
+        --ok-bg: #14261a;    --ok-line: #2a4d34;    --ok-ink: #7fd39a;
+
+        --shadow-float: 0 12px 32px -8px rgba(0, 0, 0, 0.6), 0 2px 8px -2px rgba(0, 0, 0, 0.4);
+        --shadow-side: -16px 0 48px -16px rgba(0, 0, 0, 0.55);
+        --shadow-up: 0 -12px 40px -12px rgba(0, 0, 0, 0.6);
+    }
+}

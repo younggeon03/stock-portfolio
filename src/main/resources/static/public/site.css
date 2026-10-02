@@ -1,0 +1,95 @@
+/*
+ * 공개 화면 스타일 (/, /public/institution.html).
+ * 토큰은 tokens.css. 규칙은 내 화면과 같다: 빨강·파랑은 등락(여기서는 주식 수 증가·감소)만,
+ * 상자 대신 선과 여백, 숫자는 자릿수를 맞춘다.
+ */
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Pretendard, "Pretendard Variable", -apple-system, BlinkMacSystemFont,
+                 "Apple SD Gothic Neo", "Segoe UI", "Malgun Gothic", sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    letter-spacing: -0.005em;
+    -webkit-font-smoothing: antialiased;
+}
+
+td, th, .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+a { color: var(--ink-2); text-underline-offset: 3px; }
+a:hover { color: var(--ink); }
+
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: var(--r-1); }
+
+.skip { position: absolute; left: -9999px; }
+.skip:focus { left: var(--s-4); top: var(--s-4); background: var(--bg); padding: var(--s-2) var(--s-3); z-index: 10; }
+
+.wrap { max-width: 1080px; margin: 0 auto; padding: var(--s-6) var(--s-5) var(--s-7); }
+
+/* ── 머리말 ── */
+.site-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-4);
+             flex-wrap: wrap; padding-bottom: var(--s-4); border-bottom: 1px solid var(--rule-2); }
+.site-head .brand { font-size: 15px; font-weight: 700; color: var(--ink); text-decoration: none; }
+.site-head nav { display: flex; gap: var(--s-4); font-size: 13px; }
+.site-head nav a { text-decoration: none; color: var(--ink-3); }
+.site-head nav a[aria-current="page"] { color: var(--ink); font-weight: 600; }
+
+h1 { font-size: 26px; line-height: 1.35; margin: var(--s-6) 0 var(--s-2); letter-spacing: -0.02em; }
+.lead { font-size: var(--read); line-height: var(--read-lead); color: var(--ink-2); max-width: var(--measure); margin: 0; }
+h2 { font-size: 17px; margin: var(--s-7) 0 var(--s-2); letter-spacing: -0.01em; }
+.section-note { font-size: var(--read-sm); color: var(--ink-3); margin: 0 0 var(--s-4); max-width: var(--measure); }
+
+/* ── 표 ── */
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+caption { text-align: left; font-size: var(--read-sm); color: var(--ink-3); padding-bottom: var(--s-2); }
+th { text-align: left; font-weight: 500; font-size: 12px; color: var(--ink-3);
+     padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--rule-2); white-space: nowrap; }
+td { padding: 11px var(--s-3); border-bottom: 1px solid var(--rule); vertical-align: middle; }
+th.r, td.r { text-align: right; }
+tbody tr:hover { background: var(--bg-sunken); }
+td .sub { display: block; font-size: 12px; color: var(--ink-3); }
+.ticker { font-weight: 600; color: var(--ink); }
+.muted { color: var(--ink-3); }
+.rise { color: var(--rise); }
+.fall { color: var(--fall); }
+
+/* 비중 막대. 색이 아니라 명도 */
+.bar { display: inline-block; vertical-align: middle; width: 64px; height: 4px; background: var(--bg-sunken);
+       border-radius: 2px; margin-left: var(--s-2); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--seg-2); }
+
+/* 변화 종류 글자 */
+.kind { font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+/* 요약 숫자 줄 */
+.facts { display: flex; flex-wrap: wrap; gap: var(--s-5); margin: var(--s-5) 0 0; padding: 0; list-style: none; }
+.facts li { font-size: 12px; color: var(--ink-3); }
+.facts b { display: block; font-size: 20px; color: var(--ink); font-weight: 650; font-variant-numeric: tabular-nums; }
+
+/* 기간 고르기 */
+.controls { display: flex; gap: var(--s-3); align-items: center; margin: var(--s-4) 0; flex-wrap: wrap; font-size: 13px; }
+select { font: inherit; font-size: 13px; padding: 6px 10px; border: 1px solid var(--rule-2); border-radius: var(--r-1);
+         background: var(--bg); color: var(--ink-2); }
+
+.notice { font-size: var(--read-sm); color: var(--warn-ink); background: var(--warn-bg); border: 1px solid var(--warn-line);
+          border-radius: var(--r-1); padding: var(--s-2) var(--s-3); max-width: var(--measure); }
+.loading, .empty { color: var(--ink-3); padding: var(--s-5) 0; }
+.error { color: var(--bad-ink); }
+
+/* ── 꼬리말: 출처와 한계 ── */
+.site-foot { margin-top: var(--s-7); padding-top: var(--s-4); border-top: 1px solid var(--rule-2);
+             font-size: var(--read-sm); color: var(--ink-3); line-height: 1.8; max-width: var(--measure); }
+.site-foot p { margin: 0 0 var(--s-2); }
+
+/* 좁은 화면: 덜 중요한 열을 숨긴다. 가로 스크롤을 만들지 않는다 */
+@media (max-width: 700px) {
+    .wrap { padding: var(--s-5) var(--s-4) var(--s-6); }
+    h1 { font-size: 22px; }
+    .hide-sm { display: none; }
+    td, th { padding-left: var(--s-2); padding-right: var(--s-2); }
+    .bar { display: none; }
+}
