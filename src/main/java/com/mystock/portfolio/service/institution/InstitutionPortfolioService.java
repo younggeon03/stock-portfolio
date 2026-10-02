@@ -170,6 +170,47 @@ public class InstitutionPortfolioService {
         return new ConsensusView(target, compared, bought, sold);
     }
 
+    /**
+     * 내 포트폴리오와 기관마다의 겹침. 기관의 최신 분기(보유가 있는)와 비교한다. 겹침이 큰 기관부터.
+     * 입력은 저장하지 않는다. 요청 하나 안에서 계산하고 버린다.
+     */
+    public List<OverlapSummary> overlapAll(List<Overlap.Mine> mine) {
+        List<OverlapSummary> out = new java.util.ArrayList<>();
+        for (Institution inst : institutions.findByActiveTrueOrderBySortOrder()) {
+            List<Filing13F> fs = visible(inst.getCik());
+            if (fs.isEmpty()) {
+                continue;
+            }
+            Overlap.Result r = Overlap.compare(mine, theirs(fs.get(0)), 0);
+            out.add(new OverlapSummary(inst.getCik(), inst.getNameKo(), inst.getManager(), fs.get(0).getReportPeriod(),
+                    r.overlapPercent(), r.shared().size(), r.shared().stream().limit(3).map(Overlap.Shared::ticker).toList()));
+        }
+        out.sort(Comparator.comparing(OverlapSummary::overlapPercent).reversed());
+        return out;
+    }
+
+    /** 기관 하나와의 겹침 자세히 */
+    public Optional<OverlapDetail> overlapOne(long cik, List<Overlap.Mine> mine) {
+        Optional<Institution> inst = institutions.findById(cik);
+        if (inst.isEmpty()) {
+            return Optional.empty();
+        }
+        List<Filing13F> fs = visible(cik);
+        if (fs.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(new OverlapDetail(
+                InstitutionView.of(inst.get(), fs.get(0), fs.stream().map(Filing13F::getReportPeriod).toList()),
+                Overlap.compare(mine, theirs(fs.get(0)), 10)));
+    }
+
+    private List<Overlap.Theirs> theirs(Filing13F filing) {
+        return positions(filing).stream()
+                .filter(p -> p.ticker() != null)
+                .map(p -> new Overlap.Theirs(p.ticker(), p.name(), p.weightPercent()))
+                .toList();
+    }
+
     /** 절반 이상이 낸 가장 최근 분기 */
     static LocalDate defaultConsensusPeriod(java.util.Collection<List<Filing13F>> filingsPerInstitution, int total) {
         Map<LocalDate, Integer> count = new java.util.TreeMap<>(Comparator.reverseOrder());
@@ -246,6 +287,14 @@ public class InstitutionPortfolioService {
     /** 한 기관의 분기 변화. counts 에는 그대로(UNCHANGED)도 세지만 changes 목록에는 바뀐 것만 */
     public record ChangesView(InstitutionView institution, LocalDate period, LocalDate previousPeriod,
                               Map<HoldingDiff.Kind, Long> counts, List<HoldingDiff.Change> changes) {
+    }
+
+    /** 기관 하나와의 겹침 요약. topShared 는 겹침이 큰 순서의 티커 셋 */
+    public record OverlapSummary(long cik, String nameKo, String manager, LocalDate period,
+                                 BigDecimal overlapPercent, int sharedCount, List<String> topShared) {
+    }
+
+    public record OverlapDetail(InstitutionView institution, Overlap.Result result) {
     }
 
     /** 여러 기관을 함께 본 결과. compared 는 이 분기와 앞 분기를 둘 다 낸 기관 수 */
