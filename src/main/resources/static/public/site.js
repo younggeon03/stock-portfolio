@@ -51,9 +51,12 @@ function quarter(dateText) {
     return y + "년 " + Math.ceil(m / 3) + "분기";
 }
 
-/** 종목 표시: 티커가 있으면 굵게, 회사 이름은 아래 작게 */
+/**
+ * 종목 표시: 티커가 있으면 굵게, 회사 이름은 아래 작게.
+ * 티커는 버튼이다. 누르면 stock.js 의 기업분석 창이 열린다. 버튼이라 키보드(Tab·Enter)로도 열린다
+ */
 function security(ticker, name) {
-    const t = ticker ? `<span class="ticker">${esc(ticker)}</span>` : `<span class="muted">티커 없음</span>`;
+    const t = ticker ? stockLink(ticker) : `<span class="muted">티커 없음</span>`;
     return `${t}<span class="sub">${esc(name)}</span>`;
 }
 
@@ -153,4 +156,9 @@ function squarify(items, x, y, w, h) {
     }
     if (row.length) place();
     return out;
+}
+
+/** 기업분석 창을 여는 티커 버튼 */
+function stockLink(ticker, cls = "ticker") {
+    return `<button type="button" class="${cls} stock-link" data-stock="${esc(ticker)}">${esc(ticker)}</button>`;
 }

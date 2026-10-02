@@ -6,7 +6,11 @@
 
 
 :root {
-    color-scheme: light dark;
+    /*
+     * 화면은 밝은 종이색 하나뿐이다(2026-10, 결정기록 011). 기기가 어두운 모드여도 바꾸지 않는다.
+     * light 로 못 박아야 브라우저가 입력칸·스크롤바를 어둡게 칠하지 않는다.
+     */
+    color-scheme: light;
 
     /*
      * 바탕과 글자. 2026-10 "브리핑" 방향으로 개편했다.
@@ -87,44 +91,4 @@
                  "Apple SD Gothic Neo", "Segoe UI", "Malgun Gothic", sans-serif;
     --font-serif: "Noto Serif KR", "Nanum Myeongjo", serif;
 
-}
-
-/*
- * 어두운 화면.
- * ★ 등락 색을 그대로 쓰면 안 된다. #e03131 은 어두운 바탕에서 탁하게 죽는다.
- * 밝기를 올려 같은 "빨강/파랑" 으로 읽히게 맞춘다.
- */
-@media (prefers-color-scheme: dark) {
-    :root {
-        /* 푸른 회색 대신 따뜻한 검정. 밝은 화면의 종이색과 짝을 맞춘다 */
-        --bg: #141413;
-        --bg-sunken: #1d1d1b;
-        --bg-raised: #20201e;
-        --ink: #ecebe6;
-        --ink-2: #dedcd5;
-        --ink-3: #a3a198;
-        --rule: #2b2b28;
-        --rule-2: #3d3c38;
-
-        --rise: #ff6b6b;
-        --fall: #74a8ff;
-        --rise-soft: #2a1a1c;
-        --fall-soft: #16233a;
-
-        --seg-1: #e8eaed;
-        --seg-2: #b9bfc7;
-        --seg-3: #929aa4;
-        --seg-4: #737b86;
-        --seg-5: #59616b;
-        --seg-6: #434a53;
-        --seg-7: #333940;
-
-        --warn-bg: #2a2314;  --warn-line: #574722;  --warn-ink: #e8c877;
-        --bad-bg: #2a1718;   --bad-line: #57282a;   --bad-ink: #ff9b9b;
-        --ok-bg: #14261a;    --ok-line: #2a4d34;    --ok-ink: #7fd39a;
-
-        --shadow-float: 0 12px 32px -8px rgba(0, 0, 0, 0.6), 0 2px 8px -2px rgba(0, 0, 0, 0.4);
-        --shadow-side: -16px 0 48px -16px rgba(0, 0, 0, 0.55);
-        --shadow-up: 0 -12px 40px -12px rgba(0, 0, 0, 0.6);
-    }
 }

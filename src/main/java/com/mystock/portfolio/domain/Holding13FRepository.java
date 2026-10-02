@@ -3,12 +3,16 @@ package com.mystock.portfolio.domain;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.Collection;
 import java.util.List;
 
 /** 13F 보유 줄 */
 public interface Holding13FRepository extends JpaRepository<Holding13F, Long> {
 
     List<Holding13F> findByAccessionNoOrderByValueUsdDesc(String accessionNo);
+
+    /** 제출 하나에서 특정 종목만. 종목 창이 기관마다 수천 줄을 다 읽지 않게 */
+    List<Holding13F> findByAccessionNoAndCusipIn(String accessionNo, Collection<String> cusips);
 
     void deleteByAccessionNo(String accessionNo);
 

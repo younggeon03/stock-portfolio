@@ -25,6 +25,10 @@
             ]
         },
         {
+            label: "기업분석", href: "/public/company.html",
+            desc: "미국 종목의 공시 재무·읽을 점·기관 움직임"
+        },
+        {
             label: "배당 캘린더", href: "/public/dividends.html",
             desc: "DART 배당결정 공시로 본 일정"
         }

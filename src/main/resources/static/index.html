@@ -35,6 +35,11 @@
                     미국 주식을 1억 달러 넘게 가진 기관은 분기가 끝나고 45일 안에 보유 종목을 미국 SEC 에 공개합니다(13F).
                     10곳의 공개 자료를 매일 받아 같은 기준으로 비교합니다.
                 </p>
+                <form class="stock-search" data-stock-search role="search">
+                    <label for="stockQuery">종목 기업분석</label>
+                    <input id="stockQuery" name="q" placeholder="미국 티커 (예: MSFT)" autocomplete="off" spellcheck="false">
+                    <button type="submit">열기</button>
+                </form>
             </div>
             <figure class="brief-figure" id="featured" hidden>
                 <figcaption id="featuredCaption"></figcaption>
@@ -84,6 +89,7 @@
 
 <script src="/public/site.js"></script>
 <script src="/public/home.js"></script>
+<script src="/public/stock.js"></script>
 <script src="/public/nav.js"></script>
 </body>
 </html>

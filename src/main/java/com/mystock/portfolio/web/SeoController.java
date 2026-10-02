@@ -49,7 +49,8 @@ public class SeoController {
     @GetMapping(value = "/sitemap.xml", produces = MediaType.APPLICATION_XML_VALUE)
     public String sitemap() {
         List<String> urls = new java.util.ArrayList<>(List.of(
-                baseUrl + "/", baseUrl + "/public/overlap.html", baseUrl + "/public/dividends.html"));
+                baseUrl + "/", baseUrl + "/public/overlap.html", baseUrl + "/public/dividends.html",
+                baseUrl + "/public/company.html"));
         for (Institution i : institutions.findByActiveTrueOrderBySortOrder()) {
             urls.add(baseUrl + "/public/institution.html?cik=" + i.getCik());
         }

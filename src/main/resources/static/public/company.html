@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>기업분석 — 미국 종목을 공시와 13F 로 읽기 | 포트폴리오 분석기</title>
+    <meta name="description" content="미국 종목 하나의 SEC 공시 재무, 앱이 규칙으로 뽑은 읽을 점, 큰 기관 10곳의 보유 변화를 한 화면에. 무료, 로그인 없음.">
+    <meta property="og:title" content="기업분석 — 미국 종목을 공시와 13F 로 읽기">
+    <meta property="og:description" content="SEC 10-K 재무와 13F 기관 보유 변화를 한국어로.">
+    <meta property="og:type" content="website">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📈</text></svg>">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-kr@5.2.5/700.css">
+    <link rel="stylesheet" href="/public/tokens.css">
+    <link rel="stylesheet" href="/public/site.css">
+    <link rel="stylesheet" href="/public/nav.css">
+</head>
+<body>
+<a class="skip" href="#main">본문으로 건너뛰기</a>
+<div class="wrap">
+
+    <header class="site-head">
+        <a class="brand" href="/">포트폴리오 분석기</a>
+    </header>
+
+    <main id="main">
+        <span class="kicker">기업분석 · SEC 공시와 13F</span>
+        <h1>종목 하나를 사실로 읽기</h1>
+        <p class="lead">미국 티커를 넣으면 10-K 재무, 앱이 정해진 규칙으로 뽑은 읽을 점, 큰 기관 10곳의 보유 변화를 보여줍니다.
+            숫자를 AI 에게 맡기지 않고, 사라·팔아라는 말하지 않습니다.</p>
+
+        <form class="stock-search" data-stock-search role="search">
+            <label for="stockQuery">티커</label>
+            <input id="stockQuery" name="t" placeholder="예: MSFT" autocomplete="off" spellcheck="false">
+            <button type="submit" class="primary">분석 보기</button>
+        </form>
+        <!-- 예시 티커. 누르면 같은 페이지에서 바로 연다 -->
+        <p class="stock-picks">예시:
+            <a href="?t=MSFT">MSFT 마이크로소프트</a>
+            <a href="?t=AVGO">AVGO 브로드컴</a>
+            <a href="?t=AAPL">AAPL 애플</a>
+            <a href="?t=NVDA">NVDA 엔비디아</a>
+        </p>
+
+        <div id="stockPage" class="stock-page" aria-live="polite"></div>
+    </main>
+
+    <footer class="site-foot">
+        <p>재무: SEC EDGAR 의 10-K 원본(연결). PER·PBR 은 지금 주가와 공시 EPS·BPS 로 앱이 계산합니다.</p>
+        <p>기관: 13F(분기말 기준, 최대 45일 늦음). 미국 상장 주식만 들어 있습니다.</p>
+        <p>사실을 정리할 뿐 매수·매도를 권하지 않습니다. 투자 판단은 본인 책임입니다.</p>
+    </footer>
+</div>
+
+<script src="/public/site.js"></script>
+<script src="/public/stock.js"></script>
+<script src="/public/nav.js"></script>
+</body>
+</html>
