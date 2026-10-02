@@ -42,12 +42,21 @@ class TokenCipherTest {
     }
 
     @Test
-    void 한_글자라도_바뀌면_풀리지_않는다() {
+    void 한_비트라도_바뀌면_풀리지_않는다() {
         String stored = cipher.encrypt(TOKEN, "TOSS", "owner-a");
-        char last = stored.charAt(stored.length() - 2);
-        String tampered = stored.substring(0, stored.length() - 2) + (last == 'A' ? 'B' : 'A') + stored.charAt(stored.length() - 1);
 
-        assertThat(cipher.decrypt(tampered, "TOSS", "owner-a")).isEmpty();
+        // 암호문 바이트를 직접 뒤집는다. 처음에는 base64 끝 글자를 바꿨는데, 패딩(=) 앞 글자는
+        // 아래 2비트를 디코더가 버려서 가끔 같은 바이트로 풀렸다. 그래서 16번에 한 번꼴로 실패했다
+        for (int i = 0; i < 70; i += 7) {
+            byte[] raw = Base64.getDecoder().decode(stored.substring(TokenCipher.PREFIX.length()));
+            if (i >= raw.length) {
+                break;
+            }
+            raw[i] ^= 0x01;
+            String tampered = TokenCipher.PREFIX + Base64.getEncoder().encodeToString(raw);
+
+            assertThat(cipher.decrypt(tampered, "TOSS", "owner-a")).as("%d번째 바이트를 바꿈", i).isEmpty();
+        }
     }
 
     @Test

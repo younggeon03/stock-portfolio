@@ -106,7 +106,24 @@ function ownerKey() {
 /** 서버를 부를 때 항상 이걸 쓴다. 나를 구분하는 값을 헤더에 붙여준다 */
 function apiFetch(url, options = {}) {
     const headers = Object.assign({}, options.headers || {}, { "X-Owner-Key": ownerKey() });
-    return fetch(url, Object.assign({}, options, { headers: headers }));
+    // POST·PUT·DELETE 는 CSRF 토큰을 같이 보낸다. 서버가 XSRF-TOKEN 쿠키로 내려준 값이다
+    const method = (options.method || "GET").toUpperCase();
+    if (method !== "GET" && method !== "HEAD") {
+        const token = readCookie("XSRF-TOKEN");
+        if (token) headers["X-XSRF-TOKEN"] = token;
+    }
+    return fetch(url, Object.assign({}, options, { headers: headers })).then(res => {
+        // 로그인이 풀렸다 (서버를 다시 띄웠거나 12시간이 지남). 로그인 화면으로 보낸다
+        if (res.status === 401) {
+            location.href = "/login";
+        }
+        return res;
+    });
+}
+
+function readCookie(name) {
+    const hit = document.cookie.split("; ").find(c => c.startsWith(name + "="));
+    return hit ? decodeURIComponent(hit.substring(name.length + 1)) : null;
 }
 
 
@@ -1727,6 +1744,16 @@ window.addEventListener("paste", e => {
     for (const item of items) {
         if (item.type && item.type.startsWith("image/")) { uploadScreenshot(item.getAsFile()); break; }
     }
+});
+
+// 로그인을 켠 서버에서만 로그아웃 버튼을 보인다. 내 PC 개발 모드(비밀번호 없음)에서는 누를 의미가 없다
+const logoutBtn = document.getElementById("logoutBtn");
+apiFetch("/api/me").then(r => r.ok ? r.json() : null).then(me => {
+    if (me && me.loginRequired) logoutBtn.hidden = false;
+}).catch(() => {});
+logoutBtn.addEventListener("click", () => {
+    // 로그아웃도 POST 라 CSRF 토큰이 필요하다. 끝나면 공개 첫 화면으로
+    apiFetch("/logout", { method: "POST" }).finally(() => { location.href = "/"; });
 });
 
 loadAll();

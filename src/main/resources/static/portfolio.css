@@ -197,6 +197,9 @@ button.primary:hover { background: var(--ink); color: var(--bg); opacity: 0.88; 
 
 a { color: var(--ink-2); text-underline-offset: 2px; }
 
+/* 머리말의 다른 화면으로 가는 글자 링크. 버튼처럼 보이면 무언가 실행될 것 같아서 글자로 둔다 */
+.topbar-link { font-size: 12.5px; padding: 7px 4px; }
+
 /* ══════════ 머리말 ══════════ */
 
 .topbar {
