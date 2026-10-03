@@ -155,4 +155,14 @@ class ThirteenFParsingTest {
             return InfoTableParser.parse(in);
         }
     }
+
+    /** 채권·워런트의 긴 이름이 티커 자리에 오면 저장이 통째로 실패했다. 주식 티커 모양만 남긴다 */
+    @Test
+    void 주식_티커가_아닌_긴_이름은_티커_없음으로() {
+        assertThat(ThirteenFSyncService.stockTicker("MSFT")).isEqualTo("MSFT");
+        assertThat(ThirteenFSyncService.stockTicker("BRK.B")).isEqualTo("BRK.B");
+        assertThat(ThirteenFSyncService.stockTicker("T 4.5 05/15/38")).isNull();
+        assertThat(ThirteenFSyncService.stockTicker("ABCDEFGHIJKLMNOPQRSTUV")).isNull();
+        assertThat(ThirteenFSyncService.stockTicker(null)).isNull();
+    }
 }
