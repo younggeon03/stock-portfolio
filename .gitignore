@@ -53,3 +53,5 @@ deploy/.env
 deploy/backups/
 deploy/.deployed-tag
 deploy/.previous-tag
+# 에이전트(코드 담당)의 임시 작업 폴더. 커밋하지 않는다
+.claude/worktrees/
