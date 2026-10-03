@@ -97,3 +97,24 @@ tests:
             exp_annotations:
               summary: "바깥 API 호출이 계속 실패합니다"
               description: "15분 동안 10번 넘게 실패했습니다. Grafana 의 외부 API 실패 칸에서 상태 코드를 보고, 운영 문서의 장애 대응 표를 찾으세요."
+
+  # 회로가 한 번이라도 열리면 5분 동안 알린다. 호스트 이름이 알림에 실린다
+  - interval: 1m
+    input_series:
+      - series: 'resilience4j_circuitbreaker_state{job="stock-portfolio",name="data.sec.gov",state="open"}'
+        values: '0 0 1 0 0'
+      - series: 'resilience4j_circuitbreaker_state{job="stock-portfolio",name="openapi.tossinvest.com",state="open"}'
+        values: '0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: CircuitBreakerOpen
+        exp_alerts: []
+      - eval_time: 4m
+        alertname: CircuitBreakerOpen
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              name: data.sec.gov
+            exp_annotations:
+              summary: "바깥 API 서킷 브레이커가 열렸습니다"
+              description: "그 호스트가 계속 실패해 잠시 호출을 멈췄습니다. 화면의 해당 칸이 비어 보일 수 있습니다. 상대 서비스 장애인지, 키·IP 문제인지 앱 로그를 보세요."

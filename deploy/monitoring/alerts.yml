@@ -94,3 +94,13 @@ groups:
         annotations:
           summary: "하루 Claude 토큰이 200만을 넘었습니다"
           description: "평소보다 많이 돌렸는지, 누가 버튼을 반복해서 누르는지 보세요. 기준값은 alerts.yml 의 ClaudeTokensHigh 입니다."
+
+      # 서킷 브레이커가 열렸다 = 그 호스트를 최근 20번 중 절반 넘게 실패해 30초씩 부르지 않고 있다.
+      # 열렸다 닫혔다 하므로 지난 5분 안에 한 번이라도 열렸으면 알린다
+      - alert: CircuitBreakerOpen
+        expr: max by (name) (max_over_time(resilience4j_circuitbreaker_state{job="stock-portfolio",state="open"}[5m])) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "바깥 API 서킷 브레이커가 열렸습니다"
+          description: "그 호스트가 계속 실패해 잠시 호출을 멈췄습니다. 화면의 해당 칸이 비어 보일 수 있습니다. 상대 서비스 장애인지, 키·IP 문제인지 앱 로그를 보세요."
