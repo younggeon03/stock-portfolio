@@ -54,12 +54,16 @@ public class ScreenshotParser {
     private final AnthropicProperties properties;
     private final ObjectMapper objectMapper;
 
+    private final ClaudeMetrics metrics;
+
     public ScreenshotParser(AnthropicClientProvider provider,
                             AnthropicProperties properties,
-                            ObjectMapper objectMapper) {
+                            ObjectMapper objectMapper,
+                            ClaudeMetrics metrics) {
         this.provider = provider;
         this.properties = properties;
         this.objectMapper = objectMapper;
+        this.metrics = metrics;
     }
 
     /**
@@ -118,7 +122,7 @@ public class ScreenshotParser {
 
         Message message;
         try {
-            message = provider.client().messages().create(params);
+            message = metrics.record("screenshot", properties.model(), () -> provider.client().messages().create(params));
         } catch (AppException e) {
             throw e;
         } catch (Exception e) {

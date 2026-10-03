@@ -1,0 +1,99 @@
+# 알림 규칙 단위 테스트. CI 가 promtool test rules 로 돌린다.
+# 가짜 시계열을 넣고 "이 시각에 이 알림이 울려야/안 울려야 한다" 를 확인한다.
+# 규칙을 고쳤는데 이 테스트가 그대로 통과하면, 테스트가 그 경우를 안 보고 있는 것이다
+
+rule_files:
+  - alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  # 앱이 2분 넘게 안 긁혀야 울린다. 한 번 튄 걸로는 안 울린다
+  - interval: 1m
+    input_series:
+      - series: 'up{job="stock-portfolio",instance="app:8081"}'
+        values: '1 1 0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: AppDown
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: AppDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              job: stock-portfolio
+              instance: app:8081
+            exp_annotations:
+              summary: "앱이 응답하지 않습니다"
+              description: "Prometheus 가 2분째 앱 지표를 못 긁고 있습니다. docker compose ps 와 docker compose logs app 를 보세요. 배포 중이면 deploy.sh 가 되돌렸는지 확인하세요."
+
+  # 토스 403 은 한 번만 나와도 알린다. 401 은 알리지 않는다(재시작 직후 정상)
+  - interval: 1m
+    input_series:
+      - series: 'http_client_requests_seconds_count{job="stock-portfolio",client_name="openapi.tossinvest.com",status="403",outcome="CLIENT_ERROR",uri="/oauth2/token"}'
+        values: '0 0 1 1 1'
+      - series: 'http_client_requests_seconds_count{job="stock-portfolio",client_name="openapi.tossinvest.com",status="401",outcome="CLIENT_ERROR",uri="/oauth2/token"}'
+        values: '0 1 1 1 1'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: TossForbidden
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: TossForbidden
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: "토스증권이 403 으로 막았습니다"
+              description: "대개 허용 IP 문제입니다. 앱 로그의 오류 문구에 지금 공인 IP 가 나옵니다. 토스 WTS > 설정 > Open API > 허용 IP 관리에서 등록하세요."
+
+  # 분석을 돌렸는데 캐시 읽기가 0 이면 울린다. 캐시 읽기가 늘었으면 안 울린다
+  - interval: 1m
+    input_series:
+      - series: 'claude_tokens_total{job="stock-portfolio",kind="analysis",type="input",model="m"}'
+        values: '0 1000 2000 3000'
+      - series: 'claude_tokens_total{job="stock-portfolio",kind="analysis",type="cache_read",model="m"}'
+        values: '0 0 0 0'
+      - series: 'claude_tokens_total{job="stock-portfolio",kind="news",type="input",model="h"}'
+        values: '0 10 20 30'
+      - series: 'claude_tokens_total{job="stock-portfolio",kind="news",type="cache_read",model="h"}'
+        values: '0 5 10 15'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ClaudePromptCacheDead
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: "기업분석 프롬프트 캐시가 안 읽힙니다"
+              description: "분석을 돌렸는데 캐시 읽기 토큰이 0 입니다. 에러 없이 요금만 오르는 상태입니다. 프롬프트 조립 코드(CompanyAnalysisPromptBuilder)를 최근에 바꿨는지 보세요."
+
+  - interval: 1m
+    input_series:
+      - series: 'claude_tokens_total{job="stock-portfolio",kind="analysis",type="input",model="m"}'
+        values: '0 1000 2000 3000'
+      - series: 'claude_tokens_total{job="stock-portfolio",kind="analysis",type="cache_read",model="m"}'
+        values: '0 9000 18000 27000'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ClaudePromptCacheDead
+        exp_alerts: []
+
+  # 실패가 호스트별로 묶인다. 10번 미만이면 안 울린다
+  - interval: 1m
+    input_series:
+      - series: 'http_client_requests_seconds_count{job="stock-portfolio",client_name="data.sec.gov",outcome="SERVER_ERROR",status="503",uri="/x"}'
+        values: '0+2x15'
+      - series: 'http_client_requests_seconds_count{job="stock-portfolio",client_name="opendart.fss.or.kr",outcome="UNKNOWN",status="CLIENT_ERROR",uri="none"}'
+        values: '0+0x15'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: ExternalApiFailing
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              client_name: data.sec.gov
+            exp_annotations:
+              summary: "바깥 API 호출이 계속 실패합니다"
+              description: "15분 동안 10번 넘게 실패했습니다. Grafana 의 외부 API 실패 칸에서 상태 코드를 보고, 운영 문서의 장애 대응 표를 찾으세요."

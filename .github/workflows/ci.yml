@@ -97,6 +97,22 @@ jobs:
       - name: Prometheus 설정 검사 (promtool)
         run: docker run --rm --entrypoint promtool -v "$PWD/deploy/monitoring:/etc/prometheus:ro" "$PROM_IMAGE" check config /etc/prometheus/prometheus.yml
 
+      # 알림 규칙의 문법과 단위 테스트(alerts.test.yml). 규칙을 고쳤는데 울려야 할 때 안 울리면 여기서 걸린다
+      - name: 알림 규칙 검사·테스트 (promtool)
+        run: |
+          docker run --rm --entrypoint promtool -v "$PWD/deploy/monitoring:/w:ro" -w /w "$PROM_IMAGE" check rules alerts.yml
+          docker run --rm --entrypoint promtool -v "$PWD/deploy/monitoring:/w:ro" -w /w "$PROM_IMAGE" test rules alerts.test.yml
+
+      # Alertmanager 설정 두 가지. 텔레그램 쪽은 컨테이너가 뜰 때처럼 chat_id 를 채워 본다(값은 가짜)
+      - name: Alertmanager 설정 검사 (amtool)
+        env:
+          AM_IMAGE: prom/alertmanager:v0.30.0
+        run: |
+          mkdir -p /tmp/am
+          sed "s/__CHAT_ID__/123456789/" deploy/monitoring/alertmanager/telegram.yml > /tmp/am/telegram.yml
+          cp deploy/monitoring/alertmanager/quiet.yml /tmp/am/
+          docker run --rm --entrypoint amtool -v /tmp/am:/w:ro -w /w "$AM_IMAGE" check-config telegram.yml quiet.yml
+
       - name: 대시보드 JSON 검사
         run: |
           for f in deploy/monitoring/grafana/dashboards/*.json; do

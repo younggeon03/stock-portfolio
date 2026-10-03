@@ -36,6 +36,13 @@ management:
   metrics:
     tags:
       application: stock-portfolio
+    # 응답 시간 분포. 평균·최댓값만으로는 "대부분은 빠른데 가끔 느림" 을 못 본다.
+    # 버킷(경계)을 몇 개로만 정한다. 퍼센타일 히스토그램을 통째로 켜면 주소·상태마다 수십 개 시계열이 생겨
+    # 작은 서버의 Prometheus 디스크를 채운다. 이 경계로 Grafana 에서 대략의 p95 와 "1초 넘은 비율" 을 본다
+    distribution:
+      slo:
+        http.server.requests: 100ms,300ms,1s,3s
+        http.client.requests: 300ms,1s,3s,10s
 
 # 증권사 토큰을 DB 에 넣기 전에 암호화하는 키 (base64, 32바이트). 비우면 평문으로 저장하고 기동 때 경고한다.
 # 만드는 법은 .env.example 7번. 키를 바꾸면 저장된 토큰을 못 풀어 한 번씩 새로 발급받는다.

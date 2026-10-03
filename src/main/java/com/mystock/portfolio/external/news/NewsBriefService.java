@@ -5,6 +5,7 @@ import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.OutputConfig;
 import com.mystock.portfolio.external.anthropic.AnthropicClientProvider;
 import com.mystock.portfolio.external.anthropic.AnthropicProperties;
+import com.mystock.portfolio.external.anthropic.ClaudeMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -52,9 +53,12 @@ public class NewsBriefService {
      */
     private final Map<String, Brief> cache = new ConcurrentHashMap<>();
 
-    public NewsBriefService(AnthropicClientProvider provider, AnthropicProperties properties) {
+    private final ClaudeMetrics metrics;
+
+    public NewsBriefService(AnthropicClientProvider provider, AnthropicProperties properties, ClaudeMetrics metrics) {
         this.provider = provider;
         this.properties = properties;
+        this.metrics = metrics;
     }
 
     /**
@@ -142,7 +146,7 @@ public class NewsBriefService {
                     .addUserMessage("종목: " + name + " (" + symbol + ")\n\n헤드라인:\n" + headlines)
                     .build();
 
-            Message message = provider.client().messages().create(params);
+            Message message = metrics.record("news", model, () -> provider.client().messages().create(params));
 
             // 한도에 걸려 끊겼으면 알아야 한다. 조용히 넘어가면 잘린 글이 화면에 나가고,
             // 왜 이상한지 모른 채로 같은 값을 계속 내게 된다.

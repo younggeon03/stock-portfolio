@@ -1,0 +1,28 @@
+# 텔레그램으로 보내는 Alertmanager 설정. 컨테이너가 뜰 때 __CHAT_ID__ 를 .env 의 TELEGRAM_CHAT_ID 로 바꾸고
+# 봇 토큰은 파일(/tmp/bot_token)로 넘긴다. 토큰이 이 파일·저장소·명령줄에 남지 않게 하려는 것이다.
+# 텔레그램 값이 없으면 quiet.yml 을 쓴다(compose.yml 의 alertmanager 시작 명령)
+
+route:
+  receiver: telegram
+  # 같은 알림끼리 묶는다. 호스트별 실패(ExternalApiFailing)는 호스트마다 따로
+  group_by: [alertname, client_name]
+  group_wait: 30s
+  group_interval: 5m
+  # 해결 안 된 경보를 다시 알리는 간격. 한밤중에 같은 글이 계속 오면 결국 무음으로 해 두게 된다
+  repeat_interval: 4h
+  routes:
+    - matchers: [severity = "critical"]
+      receiver: telegram
+      repeat_interval: 1h
+
+receivers:
+  - name: telegram
+    telegram_configs:
+      - bot_token_file: /tmp/bot_token
+        chat_id: __CHAT_ID__
+        parse_mode: HTML
+        send_resolved: true
+        message: |-
+          {{ if eq .Status "firing" }}[경보]{{ else }}[해결]{{ end }} <b>{{ .CommonAnnotations.summary }}</b>
+          {{ .CommonAnnotations.description }}
+          ({{ .CommonLabels.alertname }}{{ if .CommonLabels.client_name }} · {{ .CommonLabels.client_name }}{{ end }})

@@ -28,7 +28,7 @@ class ScreenshotParserShrinkTest {
     private ScreenshotParser parser(Integer maxEdge) {
         return new ScreenshotParser(null,
                 new AnthropicProperties(null, "claude-opus-5", "HIGH", 16000L, 8, 10, 7, maxEdge, null),
-                null);
+                null, ClaudeMetrics.noop());
     }
 
     @Test

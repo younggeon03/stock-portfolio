@@ -41,12 +41,16 @@ public class ClaudeAnalysisClient {
     /** 도구 스키마는 한 번만 읽어서 재사용한다 */
     private volatile ToolUnion submitTool;
 
+    private final ClaudeMetrics metrics;
+
     public ClaudeAnalysisClient(AnthropicClientProvider provider,
                                 AnthropicProperties properties,
-                                ObjectMapper objectMapper) {
+                                ObjectMapper objectMapper,
+                                ClaudeMetrics metrics) {
         this.provider = provider;
         this.properties = properties;
         this.objectMapper = objectMapper;
+        this.metrics = metrics;
     }
 
     /**
@@ -110,7 +114,8 @@ public class ClaudeAnalysisClient {
     /** 실제 호출 + 에러 번역 */
     private Message call(MessageCreateParams params) {
         try {
-            return provider.client().messages().create(params);
+            // 웹검색으로 이어 부르는 회차마다 한 번씩 센다(토큰도 회차마다 나간다)
+            return metrics.record("analysis", properties.model(), () -> provider.client().messages().create(params));
         } catch (AppException e) {
             throw e;
         } catch (Exception e) {
