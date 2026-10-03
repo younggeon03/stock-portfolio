@@ -13,6 +13,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * CUSIP → 티커. OpenFIGI(블룸버그가 무료로 연 증권 식별자 서비스)에 묻는다.
@@ -82,30 +85,65 @@ public class OpenFigiClient {
         }
     }
 
+    /** 미국 개별 거래소 코드. NYSE(UN)·나스닥(UW·UQ·UR)·NYSE American(UA)·Arca(UP)·OTC(UV) 등 */
+    static final Set<String> US_EXCHANGES = Set.of("UN", "UW", "UQ", "UR", "UA", "UP", "UV", "UF", "UD", "UT", "UX", "UB", "UM", "UC");
+
     /**
-     * 한 CUSIP 에 거래소별로 여러 결과가 온다. 미국 통합 시세(exchCode=US)를 먼저 쓴다.
-     * 없으면 첫 번째. 티커의 "/" 는 점으로 바꾼다(BRK/B → BRK.B). 화면에서 흔히 쓰는 표기다.
+     * 거래소가 없는 통합 코드(X1)의 티커 모양. "뿌리 + (숫자) + USD". 예: CCL1USD → CCL, ACCDUSD → ACCD.
+     * 상장 구조가 바뀌었거나 인수로 상장폐지된 종목의 옛 CUSIP 을 물으면 미국 거래소 결과 없이 이것만 온다
+     */
+    private static final Pattern X1_USD = Pattern.compile("([A-Z][A-Z.]*?)\\d*USD");
+
+    /**
+     * 한 CUSIP 에 거래소별로 여러 결과가 온다. 고르는 순서:
+     * 1. 미국 통합 시세(exchCode=US)
+     * 2. 미국 개별 거래소
+     * 3. 통합 코드(X1)의 달러 표기에서 뿌리만 (CCL1USD → CCL)
+     * 4. 그래도 없으면 티커 없음. 이름만 남긴다
+     *
+     * ★ 예전에는 4 대신 "첫 번째 결과" 를 썼다. 그러면 독일 거래소 코드(AVU0)나 CCL1USD 같은 값이
+     *   티커로 화면에 나왔다(2026-10-03, 카니발이 CCL1USD 로 나와서 발견). 틀린 티커보다 "티커 없음" 이 낫다.
+     * 티커의 "/" 는 점으로 바꾼다(BRK/B → BRK.B). 화면에서 흔히 쓰는 표기다.
      */
     static Map<String, Figi> parse(List<String> cusips, JsonNode response) {
         Map<String, Figi> out = new LinkedHashMap<>();
         for (int i = 0; i < cusips.size(); i++) {
             JsonNode data = response.path(i).path("data");
-            JsonNode pick = null;
-            for (JsonNode d : data) {
-                if ("US".equals(d.path("exchCode").asText())) {
-                    pick = d;
-                    break;
+            if (data.size() == 0) {
+                out.put(cusips.get(i), Figi.NOT_FOUND);
+                continue;
+            }
+            JsonNode pick = first(data, d -> "US".equals(d.path("exchCode").asText()));
+            if (pick == null) {
+                pick = first(data, d -> US_EXCHANGES.contains(d.path("exchCode").asText()));
+            }
+            String ticker = pick == null ? null : pick.path("ticker").asText();
+            if (pick == null) {
+                for (JsonNode d : data) {
+                    Matcher m = X1_USD.matcher(d.path("ticker").asText());
+                    if ("X1".equals(d.path("exchCode").asText()) && m.matches()) {
+                        pick = d;
+                        ticker = m.group(1);
+                        break;
+                    }
                 }
             }
-            if (pick == null && data.size() > 0) {
-                pick = data.get(0);
-            }
-            out.put(cusips.get(i), pick == null ? Figi.NOT_FOUND : new Figi(
-                    blankToNull(pick.path("ticker").asText().replace('/', '.')),
-                    blankToNull(pick.path("name").asText()),
-                    blankToNull(pick.path("securityType").asText())));
+            JsonNode named = pick != null ? pick : data.get(0);
+            out.put(cusips.get(i), new Figi(
+                    ticker == null ? null : blankToNull(ticker.replace('/', '.')),
+                    blankToNull(named.path("name").asText()),
+                    blankToNull(named.path("securityType").asText())));
         }
         return out;
+    }
+
+    private static JsonNode first(JsonNode data, java.util.function.Predicate<JsonNode> test) {
+        for (JsonNode d : data) {
+            if (test.test(d)) {
+                return d;
+            }
+        }
+        return null;
     }
 
     private static String blankToNull(String s) {
