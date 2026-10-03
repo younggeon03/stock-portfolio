@@ -150,6 +150,32 @@ class ThirteenFParsingTest {
         assertThat(map).containsKey("000000000");   // 못 찾은 것도 남겨야 매일 다시 묻지 않는다
     }
 
+    /**
+     * 카니발의 옛 CUSIP 은 미국 거래소 결과 없이 통합 코드(X1)만 온다(2026-10-03 실제 응답).
+     * 예전에는 첫 결과를 그대로 써서 화면에 "CCL1USD" 가 나왔다. 뿌리 "CCL" 을 써야 한다
+     */
+    @Test
+    void 미국_거래소가_없으면_통합코드의_달러_표기에서_뿌리만() throws Exception {
+        JsonNode response = om.readTree("""
+                [{"data":[{"ticker":"CCL1USD","exchCode":"X1","name":"CARNIVAL CORP","securityType":"Common Stock"},
+                          {"ticker":"CCL1GBX","exchCode":"X1","name":"CARNIVAL CORP","securityType":"Common Stock"}]},
+                 {"data":[{"ticker":"ACCDUSD","exchCode":"X1","name":"ACCOLADE INC","securityType":"Common Stock"}]},
+                 {"data":[{"ticker":"AVU0","exchCode":"GR","name":"ADVERUM BIOTECHNOLOGIES INC","securityType":"Common Stock"}]},
+                 {"data":[{"ticker":"MSFT","exchCode":"UW","name":"MICROSOFT CORP","securityType":"Common Stock"},
+                          {"ticker":"MSF","exchCode":"GR","name":"MICROSOFT CORP","securityType":"Common Stock"}]}]
+                """);
+
+        Map<String, OpenFigiClient.Figi> map = OpenFigiClient.parse(List.of("143658300", "00437E102", "00773U207", "594918104"), response);
+
+        assertThat(map.get("143658300").ticker()).isEqualTo("CCL");
+        assertThat(map.get("00437E102").ticker()).isEqualTo("ACCD");
+        // 독일 거래소 코드밖에 없으면 틀린 티커보다 "티커 없음". 이름은 남긴다
+        assertThat(map.get("00773U207").ticker()).isNull();
+        assertThat(map.get("00773U207").name()).isEqualTo("ADVERUM BIOTECHNOLOGIES INC");
+        // 통합 시세(US)가 없어도 미국 개별 거래소(UW)를 다른 나라보다 먼저
+        assertThat(map.get("594918104").ticker()).isEqualTo("MSFT");
+    }
+
     private List<InfoTableParser.Row> parse(String file) throws Exception {
         try (InputStream in = getClass().getResourceAsStream("/thirteenf/" + file)) {
             return InfoTableParser.parse(in);
