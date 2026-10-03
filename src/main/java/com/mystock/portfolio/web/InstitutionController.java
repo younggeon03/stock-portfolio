@@ -21,7 +21,7 @@ import java.util.Map;
  *
  * 조회는 DB 에 받아 둔 것만 읽는다. 받는 건 매일 아침 배치가 하고, 지금 당장 받고 싶으면 POST /sync.
  */
-@Tag(name = "기관 포트폴리오 (13F)", description = "국민연금·버크셔 등이 SEC 에 낸 분기별 미국 주식 보유. 무료. 분기말 뒤 최대 45일 늦은 자료다")
+@Tag(name = "기관 포트폴리오 (13F)", description = "피델리티·버크셔 등 큰 기관 10곳이 SEC 에 낸 분기별 미국 주식 보유. 무료. 분기말 뒤 최대 45일 늦은 자료다")
 @RestController
 @RequestMapping("/api/institutions")
 public class InstitutionController {

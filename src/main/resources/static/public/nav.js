@@ -17,7 +17,7 @@
         },
         {
             label: "기관 포트폴리오", href: "/",
-            desc: "국민연금·버크셔 등 10곳의 13F",
+            desc: "피델리티·버크셔 등 큰 기관 10곳의 13F",
             children: [
                 { label: "기관 목록", href: "/" },
                 { label: "같이 산 종목", href: "/#consensus" },
