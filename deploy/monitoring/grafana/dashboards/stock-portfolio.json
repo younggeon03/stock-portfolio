@@ -11,7 +11,7 @@
   "graphTooltip": 1,
   "refresh": "30s",
   "schemaVersion": 41,
-  "version": 3,
+  "version": 4,
   "time": {
     "from": "now-6h",
     "to": "now"
@@ -1474,6 +1474,144 @@
         }
       ],
       "description": "cache_read 가 0 이면 프롬프트 캐싱이 죽은 것(알림 ClaudePromptCacheDead). 하루 합계가 200만을 넘으면 ClaudeTokensHigh"
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "서킷 브레이커 열림 (호스트별)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 68,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (name)(resilience4j_circuitbreaker_state{job=\"stock-portfolio\",state=\"open\"})",
+          "legendFormat": "{{name}}"
+        }
+      ],
+      "description": "1 이면 그 호스트를 30초씩 부르지 않고 바로 실패시키는 중. 알림 CircuitBreakerOpen"
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "바깥 API 재시도 (1시간, 호스트별)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 68,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (client_name, reason)(increase(http_client_retries_total{job=\"stock-portfolio\"}[1h]))",
+          "legendFormat": "{{client_name}} {{reason}}"
+        }
+      ],
+      "description": "GET 이 네트워크 오류·5xx 로 다시 보낸 횟수. 많으면 상대가 불안정한 것"
     }
   ]
 }
