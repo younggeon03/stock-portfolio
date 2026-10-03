@@ -21,7 +21,7 @@
 
 | 주소 | 비용 |
 |---|---|
-| `POST /api/analysis/{symbol}` | 1회 800~1,600원 (웹검색이 길어지면 더) |
+| `POST /api/analysis/{symbol}` | 1회 800~1,600원 (웹검색이 길어지면 더). 안 가진 종목도 됨(현재가만) |
 | `POST /api/import/screenshot` | 1장 약 60원. 보내기 전에 긴 변 2,000px 로 줄입니다 |
 | `POST /api/news/brief` | 종목당 하루 한 번, 약 5원(하쿠). 실패해도 목록은 나감 |
 
@@ -60,6 +60,7 @@ java -jar target/portfolio-0.0.1-SNAPSHOT.jar
 
 - **새 화면·기능은 `static/public/nav.js` 의 `MENU` 에 한 줄 넣어 사이드바에 붙입니다.** 화면 HTML 에는 메뉴를 쓰지 않고 `nav.css`·`nav.js` 만 부릅니다. 운영자 전용은 `owner: true`.
 - **공개 화면은 "브리핑" 방향입니다**([결정기록 011](docs/결정기록.md#011-공개-화면은-브리핑-으로-읽히게-한다)). 큰 제목(h1·h2)만 명조 `--font-serif`, 나머지는 고딕. 요약 문장은 자료로 만들고 HTML 에 숫자를 쓰지 마세요.
+- **AI 기업분석을 그리는 코드는 `public/analysis-view.js`·`analysis.css` 한 곳**입니다. 나의 포트폴리오와 공개 기업분석이 같이 씁니다. **평단가가 들어간 분석(`includes_position`)은 공개 주소로 절대 내보내지 마세요.**
 - **색·간격 토큰은 `static/public/tokens.css` 한 곳에 있습니다.** 공개 화면과 내 화면이 같이 씁니다. `portfolio.css` 에 토큰을 다시 만들지 마세요.
 - **화면은 밝은 종이색 하나뿐입니다.** 어두운 화면을 따로 두지 않습니다(2026-10 결정). `prefers-color-scheme` 분기를 다시 만들지 마세요.
 - 공개 화면을 고쳤으면 axe-core 로 첫 화면/기관 상세/겹침/배당 + 모바일에서 위반 0 을 확인하세요.

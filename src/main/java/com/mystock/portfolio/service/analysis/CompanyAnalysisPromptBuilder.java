@@ -62,6 +62,21 @@ public class CompanyAnalysisPromptBuilder {
 
         sb.append('\n').append(searchGuide(f)).append('\n');
 
+        if (!f.held()) {
+            // 안 가진 종목. 규칙(판정을 "새로 담을 만한가" 로, POSITION_REVIEW 는 해당 없음)은 시스템 지시문
+            // (company-analysis-system.md)에 한 번만 둔다. 여기서는 그 규칙을 켜는 표시만 한다
+            sb.append("\n[보유현황] 보유하지 않은 종목이다. 평단가·수량·손익·비중이 없다.\n");
+            sb.append("조회 기준: ").append(f.asOf().format(TIME)).append('\n');
+            sb.append("현재가: ").append(money(f.lastPrice(), f.currency())).append('\n');
+        } else {
+            appendPosition(sb, f);
+        }
+        appendMarket(sb, f);
+        return sb.toString();
+    }
+
+    /** 가진 종목의 보유 현황 */
+    private void appendPosition(StringBuilder sb, CompanyAnalysisFacts f) {
         sb.append("\n[보유현황] ★ 아래 숫자는 앱이 증권사 API 에서 직접 가져온 확정값이다. 그대로 인용하고 바꾸지 마라.\n");
         sb.append("조회 기준: ").append(f.asOf().format(TIME)).append(" (토스증권·나무증권 합산)\n");
         sb.append("보유처: ").append(f.brokers()).append('\n');
@@ -77,7 +92,10 @@ public class CompanyAnalysisPromptBuilder {
                 .append(signed(f.profitRatePercent())).append("%)\n");
         sb.append("전체 자산에서 이 종목의 비중: ").append(strip(f.weightPercent())).append("%\n");
         sb.append("전체 자산: ").append(comma(f.totalValueKrw())).append("원\n");
+    }
 
+    /** 시세 통계·공시 재무·위험 신호·요청. 가진 종목이든 아니든 같다 */
+    private void appendMarket(StringBuilder sb, CompanyAnalysisFacts f) {
         if (f.annualizedVolatilityPercent() != null) {
             sb.append("\n[시세 통계] 최근 ").append(f.dataPoints()).append("거래일, 토스증권 일봉 기준\n");
             sb.append("연환산 변동성: ").append(strip(f.annualizedVolatilityPercent())).append("%");
@@ -105,10 +123,12 @@ public class CompanyAnalysisPromptBuilder {
 
         sb.append("\n[요청]\n");
         sb.append("위 7개 섹션을 모두 채워서 submit_analysis 도구를 정확히 한 번 호출해라.\n");
-        sb.append("POSITION_REVIEW 에서는 [보유현황] 의 숫자를 직접 인용해라.\n");
-        sb.append("risks 에는 이 보유 상태에서 실제로 감당 중인 위험을 담아라.\n");
-
-        return sb.toString();
+        if (f.held()) {
+            sb.append("POSITION_REVIEW 에서는 [보유현황] 의 숫자를 직접 인용해라.\n");
+            sb.append("risks 에는 이 보유 상태에서 실제로 감당 중인 위험을 담아라.\n");
+        } else {
+            sb.append("보유하지 않은 종목이다. 지시문의 \"보유하지 않은 종목\" 규칙을 따라라.\n");
+        }
     }
 
     /**

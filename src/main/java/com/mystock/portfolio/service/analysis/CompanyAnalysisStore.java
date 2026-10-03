@@ -51,12 +51,12 @@ public class CompanyAnalysisStore {
 
     /** 성공 결과를 저장한다 */
     @Transactional
-    public void saveSuccess(String symbol, ClaudeCallResult result) {
+    public void saveSuccess(String symbol, ClaudeCallResult result, boolean includesPosition) {
         repository.findBySymbol(symbol).ifPresent(entity -> {
             // 캐시를 켠 뒤로 inputTokens 는 "캐시에 없던 나머지" 라서 실제 프롬프트 크기보다 작다.
             // 기록은 캐싱 전후를 같은 눈금으로 비교할 수 있어야 하므로 전체 크기를 남긴다.
             entity.markSuccess(result.analysisJson(), result.model(),
-                    result.totalPromptTokens(), result.outputTokens(), result.webSearchCount());
+                    result.totalPromptTokens(), result.outputTokens(), result.webSearchCount(), includesPosition);
             repository.save(entity);
         });
     }

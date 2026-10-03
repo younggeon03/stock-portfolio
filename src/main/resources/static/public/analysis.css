@@ -1,0 +1,203 @@
+/*
+ * AI 기업분석 본문 스타일. 나의 포트폴리오 드로어와 공개 기업분석 화면이 같이 쓴다 (그리는 코드는 analysis-view.js).
+ * 토큰은 tokens.css. 분석 본문을 감싸는 요소에 class="analysis-view" 를 붙인다.
+ */
+
+/* ══════════ 판정 ══════════ */
+
+/*
+ * 기업분석 탭에서 제일 먼저 읽히는 블록.
+ * 색은 여기서도 등락 규칙을 따른다. 더 담아도 되면 빨강, 줄일 상태면 파랑.
+ * 한국 증시에서 빨강이 오름이라 "늘리는 쪽" 과 뜻이 맞는다.
+ * 판단 보류는 회색이다. 모른다는 걸 색으로 꾸미지 않는다.
+ */
+.verdict {
+    border-left: 3px solid var(--ink-3);
+    padding: var(--s-4) var(--s-4) var(--s-4) var(--s-4);
+    margin-bottom: var(--s-5);
+    background: var(--bg-sunken);
+    border-radius: 0 var(--r-2) var(--r-2) 0;
+}
+.verdict.up    { border-left-color: var(--rise); background: var(--rise-soft); }
+.verdict.down  { border-left-color: var(--fall); background: var(--fall-soft); }
+.verdict.flat  { border-left-color: var(--ink); }
+.verdict.muted { border-left-color: var(--ink-3); }
+
+.v-stance {
+    font-size: 12px; font-weight: 600; letter-spacing: 0;
+    display: flex; align-items: center; gap: 5px; margin-bottom: 5px;
+    color: var(--ink-2);
+}
+.verdict.up .v-stance   { color: var(--rise); }
+.verdict.down .v-stance { color: var(--fall); }
+.v-mark { font-size: 9px; }
+
+.v-headline {
+    font-size: 23px; font-weight: 700; letter-spacing: -0.03em;
+    line-height: 1.35; margin-bottom: var(--s-3);
+}
+
+.v-reason {
+    font-size: var(--read); line-height: var(--read-lead); color: var(--ink-2);
+    max-width: var(--measure);
+}
+
+.v-basis { display: flex; flex-wrap: wrap; gap: 5px; margin-top: var(--s-3); }
+/* 가라앉은 바탕 위라 --ink-3 로는 4.37:1 밖에 안 나온다. 한 단계 진한 색을 쓴다 */
+.basis {
+    font-size: 12px; color: var(--ink-2);
+    border: 1px solid var(--rule-2); border-radius: 999px; padding: 2px 8px;
+}
+
+.summary-line {
+    font-size: 17px; font-weight: 600; line-height: 1.7; color: var(--ink);
+    padding-bottom: var(--s-5); border-bottom: 1px solid var(--rule);
+    letter-spacing: -0.015em; max-width: var(--measure);
+}
+
+.sec { padding: var(--s-7) 0; border-bottom: 1px solid var(--rule-2); }
+.sec:last-of-type { border-bottom: none; }
+/*
+ * 섹션 제목.
+ *
+ * ★ 본문과 두 단계를 벌린다.
+ * 15px 제목에 15px 본문이면 눈이 구역 경계를 못 찾아 전체가 한 덩어리로 보인다.
+ * 크기(19px)와 굵기(700)와 색(--ink)을 한꺼번에 올려 제목만 훑어도 목차가 되게 한다.
+ */
+.sec h3 {
+    font-size: 19px; font-weight: 700; margin: 0 0 var(--s-3); color: var(--ink);
+    display: flex; align-items: baseline; gap: var(--s-2);
+    letter-spacing: -0.02em; line-height: 1.35;
+}
+.sec.na h3, .sec.na .body { color: var(--ink-3); }
+.sec .na-badge { font-size: 12px; font-weight: 400; color: var(--ink-3); }
+/*
+ * 본문.
+ *
+ * ★ 덩어리를 깨는 장치가 둘 있다 (portfolio.js 의 prose() 가 붙인다).
+ * .lead — 문단의 첫 문장. 대개 결론이라 이것만 읽고 넘어가도 뜻이 통해야 한다.
+ * .num  — 단위가 붙은 숫자. 이 화면에서 실제로 찾는 건 숫자다.
+ *
+ * 둘 다 색과 굵기만 바꾸고 크기는 건드리지 않는다. 크기까지 흔들면 줄 간격이 들쭉날쭉해진다.
+ */
+.sec .body {
+    font-size: var(--read); line-height: var(--read-lead);
+    white-space: pre-wrap; color: var(--ink-2); max-width: var(--measure);
+}
+
+/* 공개 화면의 .lead(머리 문단)와 이름이 겹친다. 분석 본문 안에서만 */
+.analysis-view .lead { color: var(--ink); font-weight: 600; }
+
+/* 숫자는 자릿수가 세로로 맞아야 눈이 크기를 가늠한다 */
+b.num {
+    color: var(--ink); font-weight: 700;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.sec ul {
+    margin: var(--s-4) 0 0; padding-left: var(--s-5);
+    font-size: var(--read); line-height: 1.8; color: var(--ink-2); max-width: var(--measure);
+}
+.sec li { margin-bottom: var(--s-2); padding-left: 3px; }
+.sec li::marker { color: var(--ink-2); }
+
+/* 평단가 비교는 이 분석의 결론이라 따로 세운다 */
+.sec.position {
+    border-left: 2px solid var(--ink); padding-left: var(--s-4);
+    background: var(--bg-sunken); border-radius: 0 var(--r-2) var(--r-2) 0;
+    margin-top: var(--s-2); padding-right: var(--s-4);
+}
+
+/* 지표 표. 기간이 열이라 옆으로 넓어질 수 있으니 안에서만 가로 스크롤된다 */
+.metric-box { margin-top: var(--s-4); overflow-x: auto; }
+
+.period-toggle { display: flex; gap: 3px; margin-bottom: var(--s-2); }
+.period-toggle button { font-size: 12px; padding: 4px 12px; border-radius: 999px; }
+.period-toggle button.on {
+    background: var(--ink); border-color: var(--ink); color: var(--bg); font-weight: 600;
+}
+
+/*
+ * 지표 표.
+ *
+ * ★ 본문과 같은 크기로 읽는다.
+ * 이 표는 숫자를 훑는 곳이면서 동시에 "해석" 칸에서 문장을 읽는 곳이다.
+ * 12.5px 로는 해석이 안 읽혔다. 본문(15px)보다 한 단계만 작게 잡는다.
+ *
+ * 숫자는 오른쪽, 글자는 왼쪽. 소수점과 자릿수가 세로로 줄을 서야 기간끼리 비교된다.
+ */
+table.metrics { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.metrics th.num { text-align: right; white-space: nowrap; }
+table.metrics th {
+    text-align: left; font-weight: 600; color: var(--ink-2); font-size: 12.5px;
+    padding: 6px 10px; border-bottom: 1px solid var(--rule-2);
+    white-space: nowrap;
+}
+table.metrics td {
+    padding: 7px 10px; border-bottom: 1px solid var(--rule); color: var(--ink-2);
+    vertical-align: baseline; line-height: 1.5;
+}
+/* 항목 이름은 그 줄이 무엇인지라 본문색보다 진하게 */
+table.metrics td:first-child { color: var(--ink); font-weight: 600; white-space: nowrap; }
+/* 해석 칸은 문장이라 폭을 넉넉히 주고 줄바꿈을 허용한다 */
+table.metrics td:last-child, table.metrics th:last-child { width: 40%; }
+/* 숫자는 오른쪽 정렬. 열 너비를 고정해 줄마다 위치가 흔들리지 않게 한다 */
+table.metrics td.val {
+    text-align: right; font-weight: 600; color: var(--ink);
+    white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+table.metrics th.num { text-align: right; }
+table.metrics td.unknown { color: var(--ink-3); font-weight: 400; }
+/* 각주 번호는 값을 읽는 데 방해가 되면 안 된다 */
+.fn { font-size: 10px; }
+.fn { font-size: 9px; color: var(--ink-3); margin-left: 3px; vertical-align: super; }
+
+/* 시점값의 기준일. 열을 따로 두지 않고 값 아래에 작게 붙인다 */
+/*
+ * 기준일.
+ *
+ * ★ block 으로 두면 안 된다.
+ * 값이 "연 0.75%" 처럼 짧아도 기준일이 아래 줄을 차지해서 줄 높이가 두 배가 된다.
+ * 값 왼쪽에 붙여 한 줄로 만든다. 값은 오른쪽 정렬이라 숫자가 열 끝에 그대로 줄을 선다.
+ */
+.as-of {
+    font-size: 11.5px; color: var(--ink-3); font-weight: 400;
+    margin-right: var(--s-2);
+}
+
+.srcs { margin-top: var(--s-4); font-size: var(--read-sm); color: var(--ink-3); line-height: 1.9; }
+.srcs a { color: var(--ink-3); }
+
+.risk-box { margin-top: var(--s-5); padding-top: var(--s-4); border-top: 1px solid var(--rule-2); }
+/* 섹션 제목과 같은 급이다. 여기만 작으면 리스크 구역이 통째로 안 보인다 */
+.risk-box h3 { font-size: 19px; color: var(--ink); letter-spacing: -0.02em; font-weight: 700; margin: 0 0 var(--s-3); }
+.risk { padding: var(--s-4) 0; border-bottom: 1px solid var(--rule); font-size: var(--read); }
+.risk:last-child { border-bottom: none; }
+.risk .rtitle { font-weight: 700; margin-bottom: 4px; display: flex; align-items: baseline; gap: var(--s-2); }
+.risk.HIGH .rtitle { color: var(--bad-ink); }
+.risk .rsev { font-size: 11.5px; font-weight: 500; color: var(--ink-3); }
+.risk .rdetail { line-height: var(--read-lead); color: var(--ink-2); max-width: var(--measure); }
+
+.disclaimer {
+    margin-top: var(--s-5); padding-top: var(--s-3); border-top: 1px solid var(--rule);
+    font-size: var(--read-sm); color: var(--ink-3); line-height: 1.85;
+}
+
+.state { padding: var(--s-7) var(--s-4); text-align: center; font-size: var(--read); color: var(--ink-2); line-height: 1.8; }
+.state.err {
+    text-align: left; color: var(--bad-ink); background: var(--bad-bg);
+    border: 1px solid var(--bad-line); border-radius: var(--r-1);
+    padding: 13px 15px; white-space: pre-wrap;
+}
+.stale-banner, .fail-banner {
+    padding: 11px 14px; border-radius: var(--r-1); font-size: 13px;
+    margin-bottom: var(--s-4); border: 1px solid;
+}
+.stale-banner { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn-ink); }
+.fail-banner { background: var(--bad-bg); border-color: var(--bad-line); color: var(--bad-ink); white-space: pre-wrap; }
+
+.spinner {
+    width: 26px; height: 26px; margin: 0 auto var(--s-3);
+    border: 2px solid var(--rule); border-top-color: var(--ink);
+    border-radius: 50%; animation: spin 0.75s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

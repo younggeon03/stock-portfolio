@@ -43,6 +43,12 @@ public record CompanyAnalysisResponse(
         Integer outputTokens,
         Integer webSearchCount,
 
+        /**
+         * 이 분석에 내 평단가·수량·손익이 들어갔나. 화면이 "평단가 기준 분석" 인지 "현재가만 본 분석" 인지 표시한다.
+         * 분석이 없으면 null
+         */
+        Boolean includesPosition,
+
         /** 분석 본문. 아직 성공한 분석이 없으면 null */
         CompanyAnalysisView analysis
 ) {
@@ -56,6 +62,6 @@ public record CompanyAnalysisResponse(
     /** 아직 분석한 적 없는 종목 */
     public static CompanyAnalysisResponse none(String symbol) {
         return new CompanyAnalysisResponse(symbol, "NONE", null, false, null, null,
-                DISCLAIMER, null, null, null, null, null);
+                DISCLAIMER, null, null, null, null, null, null);
     }
 }
