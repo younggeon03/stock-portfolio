@@ -222,7 +222,7 @@ public class ThirteenFSyncService {
                 continue;
             }
             List<CusipTicker> rows = result.entrySet().stream()
-                    .map(e -> new CusipTicker(e.getKey(), e.getValue().ticker(),
+                    .map(e -> new CusipTicker(e.getKey(), stockTicker(e.getValue().ticker()),
                             truncate(e.getValue().name(), 200), truncate(e.getValue().securityType(), 50)))
                     .toList();
             tickers.saveAll(rows);
@@ -230,6 +230,19 @@ public class ThirteenFSyncService {
             Thread.sleep(figiClient.pauseMillis());
         }
         return found;
+    }
+
+    /** cusip_ticker.ticker 칸 길이. V2 에서 정했다 */
+    static final int TICKER_MAX = 20;
+
+    /**
+     * OpenFIGI 가 돌려준 "티커" 중 주식 티커로 쓸 것만.
+     * 채권·워런트는 "T 4.5 05/15/38" 처럼 긴 이름이 티커 자리에 온다. 그대로 넣으면 칸 길이를 넘어
+     * 저장이 통째로 실패한다(2026-10-03 기관 교체 때 이 한 줄 때문에 4,300개 변환이 멈췄다).
+     * 잘라서 넣으면 엉뚱한 티커가 되므로 "티커 없음" 으로 둔다. 회사 이름(figiName)은 남는다.
+     */
+    static String stockTicker(String ticker) {
+        return ticker == null || ticker.length() > TICKER_MAX || ticker.contains(" ") ? null : ticker;
     }
 
     private static String truncate(String s, int max) {
