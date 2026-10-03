@@ -1,0 +1,17 @@
+# Prometheus 가 무엇을 얼마나 자주 긁어 갈지. 바꾼 뒤 deploy.sh 가 SIGHUP 으로 다시 읽힌다(재시작 없음).
+# 문법 검사: ci.yml 의 promtool 단계
+
+global:
+  # 15초면 앱이 죽은 걸 30초 안에 알아챈다. 더 줄이면 작은 서버에서 저장 공간·CPU 만 먹는다
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: stock-portfolio
+    # 관리 포트(8081)는 컨테이너 안에서는 모든 주소에 열려 있다(application.yml 에 management.server.address 가 없다).
+    # 그래서 같은 compose 네트워크의 app:8081 로 닿는다. 바깥(Caddy)으로는 /actuator 가 404 다
+    metrics_path: /actuator/prometheus
+    # 앱이 GC 등으로 멈췄을 때 긁기가 다음 주기와 겹치지 않게 짧게 끊는다
+    scrape_timeout: 5s
+    static_configs:
+      - targets: ['app:8081']
