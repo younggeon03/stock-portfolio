@@ -12,8 +12,9 @@ import org.springframework.web.client.RestClient;
 public class DartRestClientConfig {
 
     @Bean
-    public RestClient dartRestClient(DartProperties properties) {
-        return RestClient.builder()
+    public RestClient dartRestClient(DartProperties properties, RestClient.Builder builder) {
+        // 주입받은 Builder 라야 호출 지표가 남는다(HttpClientObservationConfig)
+        return builder
                 .baseUrl(properties.baseUrl())
                 .build();
     }

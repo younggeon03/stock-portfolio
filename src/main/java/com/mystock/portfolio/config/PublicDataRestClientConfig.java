@@ -13,8 +13,9 @@ import org.springframework.web.client.RestClient;
 public class PublicDataRestClientConfig {
 
     @Bean
-    public RestClient publicDataRestClient() {
-        return RestClient.builder()
+    public RestClient publicDataRestClient(RestClient.Builder builder) {
+        // 주입받은 Builder 라야 호출 지표가 남는다(HttpClientObservationConfig). 부트는 주입할 때마다 새 Builder 를 준다
+        return builder
                 .defaultHeader("User-Agent", "Mozilla/5.0 (compatible; PortfolioApp/1.0)")
                 .build();
     }

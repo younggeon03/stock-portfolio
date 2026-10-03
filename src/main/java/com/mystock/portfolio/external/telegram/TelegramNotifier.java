@@ -28,12 +28,15 @@ public class TelegramNotifier {
 
     private final String token;
     private final String chatId;
-    private final RestClient restClient = RestClient.create("https://api.telegram.org");
+    private final RestClient restClient;
 
     public TelegramNotifier(@Value("${telegram.bot-token:}") String token,
-                            @Value("${telegram.chat-id:}") String chatId) {
+                            @Value("${telegram.chat-id:}") String chatId,
+                            RestClient.Builder builder) {
         this.token = token == null ? "" : token.strip();
         this.chatId = chatId == null ? "" : chatId.strip();
+        // 주입받은 Builder 라야 호출 지표가 남는다. 토큰은 {token} 템플릿 값이라 지표 태그에는 안 실린다
+        this.restClient = builder.baseUrl("https://api.telegram.org").build();
     }
 
     public boolean enabled() {

@@ -11,7 +11,7 @@
   "graphTooltip": 1,
   "refresh": "30s",
   "schemaVersion": 41,
-  "version": 1,
+  "version": 2,
   "time": {
     "from": "now-6h",
     "to": "now"
@@ -842,8 +842,8 @@
     {
       "id": 12,
       "type": "timeseries",
-      "title": "외부 API 실패 — 대용(다음 PR 에서 교체)",
-      "description": "아직 외부 API 호출별 지표가 없어 error·warn 로그 수로 대신 본다. 토스 403·앤트로픽 400 같은 실패가 여기 섞여 오른다",
+      "title": "외부 API 실패 (5분, 호스트별)",
+      "description": "성공(2xx·3xx)이 아닌 바깥 API 호출 수. 토스 403(허용 IP)·429(한도), SEC 차단, 연결 실패가 여기 뜬다. 호스트는 client_name 태그",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -898,15 +898,13 @@
       },
       "targets": [
         {
+          "refId": "A",
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (level)(increase(logback_events_total{job=\"stock-portfolio\",level=~\"error|warn\"}[5m]))",
-          "legendFormat": "{{level}}",
-          "range": true,
-          "instant": false,
-          "refId": "A"
+          "expr": "sum by (client_name, status)(increase(http_client_requests_seconds_count{job=\"stock-portfolio\",outcome!=\"SUCCESS\"}[5m]))",
+          "legendFormat": "{{client_name}} {{status}}"
         }
       ]
     },
@@ -1063,6 +1061,142 @@
           "range": true,
           "instant": false,
           "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "외부 API 호출 (초당, 호스트별)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 44,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (client_name)(rate(http_client_requests_seconds_count{job=\"stock-portfolio\"}[5m]))",
+          "legendFormat": "{{client_name}}"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "외부 API 평균 지연 (호스트별)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 44,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (client_name)(rate(http_client_requests_seconds_sum{job=\"stock-portfolio\"}[5m])) / clamp_min(sum by (client_name)(rate(http_client_requests_seconds_count{job=\"stock-portfolio\"}[5m])), 1e-9)",
+          "legendFormat": "{{client_name}}"
         }
       ]
     }

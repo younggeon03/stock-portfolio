@@ -18,8 +18,9 @@ import org.springframework.web.client.RestClient;
 public class NamuhRestClientConfig {
 
     @Bean
-    public RestClient namuhRestClient(NamuhApiProperties properties) {
-        return RestClient.builder()
+    public RestClient namuhRestClient(NamuhApiProperties properties, RestClient.Builder builder) {
+        // 주입받은 Builder 라야 호출 지표가 남는다(HttpClientObservationConfig)
+        return builder
                 .baseUrl(properties.baseUrl())
                 .build();
     }

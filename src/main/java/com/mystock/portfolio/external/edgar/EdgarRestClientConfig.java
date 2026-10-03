@@ -14,8 +14,8 @@ import org.springframework.web.client.RestClient;
 public class EdgarRestClientConfig {
 
     @Bean
-    public RestClient edgarRestClient(EdgarProperties properties) {
-        RestClient.Builder builder = RestClient.builder();
+    public RestClient edgarRestClient(EdgarProperties properties, RestClient.Builder builder) {
+        // 주입받은 Builder 라야 호출 지표가 남는다(HttpClientObservationConfig)
         if (properties.hasUserAgent()) {
             builder.defaultHeader("User-Agent", properties.userAgent());
         }
