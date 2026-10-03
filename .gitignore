@@ -9,7 +9,7 @@ out/
 *.ipr
 
 ### 개발 도구 설정 (개인 환경 값이라 공유하지 않는다) ###
-.claude/
+.claude/settings.local.json
 
 ### Eclipse ###
 .apt_generated
