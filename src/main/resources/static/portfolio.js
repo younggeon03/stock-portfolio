@@ -54,32 +54,7 @@ let analysisTimer = null;
 let analysisStartedAt = null;
 let dragDepth = 0;
 
-/** 이동평균선 설정. 국내 증권사 기본값이다 */
-const MA_STYLE = {
-    5:   { color: "#f08c00", label: "5일" },
-    20:  { color: "#2f9e44", label: "20일" },
-    60:  { color: "#7048e8", label: "60일" },
-    120: { color: "#868e96", label: "120일" }
-};
-
-/**
- * 차트에 몇 봉을 처음부터 보여줄지.
- *
- * ★ 이평선이 잘려 보이던 이유가 여기 있었다.
- * 토스에서 200봉을 받는데, 120일선은 121번째 봉부터 값이 생긴다.
- * 200봉을 전부 펼쳐 놓으면 120일선이 화면 한가운데에서 뚝 시작해 "잘린 선" 으로 보인다.
- *
- * 그래서 계산은 200봉 전부로 하고 처음 보이는 구간만 마지막 80봉으로 잡는다.
- * 80 = 200 - 120 이라, 보이는 구간에서는 네 선이 모두 왼쪽 끝까지 이어진다.
- * 앞쪽 데이터는 그대로 들어 있으니 왼쪽으로 끌면 계속 나온다.
- */
-const CHART_VISIBLE_BARS = 80;
-
-/** CSS 변수 하나를 읽는다. 색을 두 군데에 적어두면 반드시 어긋난다 */
-function cssVar(name, fallback) {
-    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-    return v || fallback;
-}
+// 이동평균선 설정(MA_STYLE)·처음 보이는 봉 수(CHART_VISIBLE_BARS)·차트 색 읽기는 public/chart-view.js 에 있다
 
 
 // ── 나를 구분하는 값 ────────────────────────────────────
@@ -666,68 +641,18 @@ function switchTab(name) {
 
 
 // ── 캔들차트 ────────────────────────────────────────────
+// 그리는 코드는 public/chart-view.js. 공개 기업분석 화면과 같이 쓴다. 여기서는 데이터만 받아 넘긴다
 
-let chart = null;
-let candleSeries = null;
-let maSeries = {};
-let chartResizeObserver = null;
-/** 마지막으로 그린 차트 데이터. 화면 모드가 바뀌면 이걸로 다시 그린다 */
-let lastChartData = null;
+const stockChart = createStockChart({ host: chartHost, legend: chartLegend, sub: chartSub });
 
 /** 이전 차트를 정리한다. 안 하면 종목을 옮길 때마다 캔버스가 쌓인다 */
 function disposeChart() {
-    if (chartResizeObserver) { chartResizeObserver.disconnect(); chartResizeObserver = null; }
-    if (chart) { chart.remove(); chart = null; }
-    candleSeries = null;
-    maSeries = {};
-    lastChartData = null;
-    chartHost.innerHTML = "";
-    chartLegend.innerHTML = "";
-    chartSub.textContent = "";
+    stockChart.dispose();
 }
 
-/**
- * 차트 크기를 화면에 맞춘다.
- *
- * ★ 폭이 0인 채로 그려지는 경우가 있다.
- * 기본 탭이 기업분석이라, 종목을 누르면 차트는 숨겨진 탭 안에서 만들어진다.
- * 그때 폭이 0이면 봉 간격 계산이 깨져서, 나중에 차트 탭을 열었을 때
- * 200봉이 오른쪽 구석에 뭉쳐 있고 왼쪽은 텅 빈 모양이 된다.
- *
- * 그래서 "처음으로 진짜 폭이 생긴 순간" 에 한 번 보이는 구간을 다시 잡아준다.
- * 그 뒤로는 크기만 맞춘다. 매번 다시 잡으면 드로어를 끌 때마다
- * 사용자가 왼쪽으로 끌어놓은 위치가 튕겨나간다.
- */
-let chartSized = false;
-
-function fitChart() {
-    if (!chart || chartHost.clientWidth <= 0) return;
-
-    chart.applyOptions({ width: chartHost.clientWidth, height: chartHost.clientHeight });
-
-    if (!chartSized) {
-        chartSized = true;
-        applyChartWindow();
-    }
-}
-
-/** 마지막 CHART_VISIBLE_BARS 봉만 보이게 맞춘다 */
-function applyChartWindow() {
-    if (!chart || !lastChartData) return;
-    const total = lastChartData.points.length;
-    const from = Math.max(0, total - CHART_VISIBLE_BARS);
-    chart.timeScale().setVisibleLogicalRange({ from: from - 0.5, to: total - 0.5 });
-}
-
-/*
- * 끄는 동안에는 크기 변경이 초당 수십 번 들어온다.
- * 매번 다시 그리면 손가락을 못 따라오므로 한 프레임에 한 번으로 묶는다.
- */
-let fitPending = false;
+/** 드로어 크기를 끄는 동안 차트 폭을 따라가게 */
 function fitChartSoon() {
-    if (fitPending) return;
-    fitPending = true;
-    requestAnimationFrame(() => { fitPending = false; fitChart(); });
+    stockChart.fitSoon();
 }
 
 async function loadChart(symbol) {
@@ -757,144 +682,12 @@ async function loadChart(symbol) {
             chartHost.innerHTML = '<div class="state">차트를 그릴 데이터가 부족합니다.</div>';
             return;
         }
-        drawChart(data);
+        stockChart.draw(data);
 
     } catch (e) {
         chartHost.innerHTML = '<div class="state err"></div>';
         chartHost.querySelector(".state").textContent = "차트를 불러오지 못했습니다: " + e.message;
     }
-}
-
-/**
- * 캔들차트를 그린다.
- *
- * ★ 색 규칙
- * 오른 날(양봉)은 빨강, 내린 날(음봉)은 파랑. 국내 증권사 관습이다.
- * 미국과 반대라 헷갈릴 수 있지만, 이 앱은 한국에서 쓰는 앱이다.
- *
- * ★ 라이브러리 버전 주의
- * v5 에서 addCandlestickSeries() 가 없어지고 addSeries(타입, 옵션) 으로 통일됐다.
- * v4 문법을 쓰면 바로 터진다.
- */
-function drawChart(data) {
-    const LC = window.LightweightCharts;
-    // 모드가 바뀌어 다시 그릴 때는 이전 차트를 먼저 치운다. 안 치우면 캔버스가 쌓인다
-    if (chartResizeObserver) { chartResizeObserver.disconnect(); chartResizeObserver = null; }
-    if (chart) { chart.remove(); chart = null; }
-    maSeries = {};
-    lastChartData = data;
-    chartHost.innerHTML = "";
-
-    const isUsd = data.currency === "USD";
-
-    // 색은 CSS 변수에서 읽는다. 여기에 직접 적으면 토큰(종이색 바탕)을 바꿀 때 차트만 옛 색으로 남는다
-    const bg = cssVar("--bg", "#ffffff");
-    const grid = cssVar("--rule", "#f2f4f6");
-    const border = cssVar("--rule-2", "#e5e8eb");
-    const axisInk = cssVar("--ink-3", "#8b95a1");
-    const rise = cssVar("--rise", "#e03131");
-    const fall = cssVar("--fall", "#1b64da");
-
-    chart = LC.createChart(chartHost, {
-        width: chartHost.clientWidth,
-        height: chartHost.clientHeight,
-        layout: { background: { color: bg }, textColor: axisInk, fontSize: 11,
-                  fontFamily: getComputedStyle(document.body).fontFamily },
-        grid: { vertLines: { color: grid }, horzLines: { color: grid } },
-        // 기본 여백이 넉넉해서 축이 0 까지 내려간다. SOXL 처럼 저점이 높은 종목은
-        // 화면 아래 절반이 빈 채로 남는다. 캔들이 차지하는 면적을 늘린다.
-        rightPriceScale: { borderColor: border, scaleMargins: { top: 0.08, bottom: 0.08 } },
-        timeScale: { borderColor: border, timeVisible: false },
-        crosshair: { mode: LC.CrosshairMode ? LC.CrosshairMode.Normal : 0 },
-        localization: {
-            priceFormatter: p => isUsd ? "$" + p.toFixed(2) : Math.round(p).toLocaleString("ko-KR")
-        }
-    });
-
-    candleSeries = chart.addSeries(LC.CandlestickSeries, {
-        upColor: rise, downColor: fall,
-        borderUpColor: rise, borderDownColor: fall,
-        wickUpColor: rise, wickDownColor: fall,
-        priceFormat: { type: "price", precision: isUsd ? 2 : 0, minMove: isUsd ? 0.01 : 1 }
-    });
-
-    candleSeries.setData(data.points.map(p => ({
-        time: p.date,
-        open: Number(p.open), high: Number(p.high),
-        low: Number(p.low), close: Number(p.close)
-    })));
-
-    // 이동평균선
-    (data.movingAverages || []).forEach(ma => {
-        const style = MA_STYLE[ma.period];
-        if (!style || !ma.values || ma.values.length === 0) return;
-
-        const line = chart.addSeries(LC.LineSeries, {
-            color: style.color, lineWidth: 2,
-            priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false
-        });
-        line.setData(ma.values.map(v => ({ time: v.date, value: Number(v.value) })));
-        maSeries[ma.period] = line;
-    });
-
-    renderChartLegend(data);
-
-    /*
-     * 보이는 구간을 마지막 80봉으로 맞춘다.
-     *
-     * fitContent() 로 200봉을 전부 펼치면 120일선이 화면 한가운데서 시작해 잘린 선으로 보인다.
-     * 데이터는 200봉 다 들어 있으므로 왼쪽으로 끌면 계속 나온다.
-     *
-     * 지금은 숨겨진 탭이라 폭이 0일 수 있다. 그러면 이 계산이 헛돌기 때문에
-     * fitChart() 가 진짜 폭이 생겼을 때 한 번 더 잡아준다.
-     */
-    chartSized = chartHost.clientWidth > 0;
-    applyChartWindow();
-
-    // 드로어가 열리거나 화면이 돌아가면 폭이 바뀐다
-    chartResizeObserver = new ResizeObserver(() => fitChart());
-    chartResizeObserver.observe(chartHost);
-
-    /*
-     * 요약 한 줄.
-     *
-     * ★ 화면에 보이는 구간만 말한다.
-     * 200봉 전체로 계산하면 "+182%" 라고 써 놓고 화면에는 내리는 구간만 보이는 일이 생긴다.
-     * 숫자와 그림이 어긋나면 둘 다 안 믿게 된다.
-     */
-    const shown = data.points.slice(-CHART_VISIBLE_BARS);
-    const closes = shown.map(p => Number(p.close));
-    const first = closes[0], last = closes[closes.length - 1];
-    const change = ((last - first) / first) * 100;
-    chartSub.innerHTML = `보이는 ${closes.length}거래일 `
-        + `<span class="${change >= 0 ? "up" : "down"}">${formatRate(change)}</span> · `
-        + `최고 ${formatPrice(Math.max(...closes), data.currency)} · `
-        + `최저 ${formatPrice(Math.min(...closes), data.currency)}`
-        + `<span class="chart-hint">왼쪽으로 끌면 ${data.points.length}거래일까지 나옵니다</span>`;
-}
-
-/** 이평선 범례. 누르면 해당 선을 켜고 끈다 (좁은 화면에서 선 4개는 뻑뻑하다) */
-function renderChartLegend(data) {
-    const periods = (data.movingAverages || [])
-        .filter(ma => ma.values && ma.values.length > 0)
-        .map(ma => ma.period);
-
-    if (periods.length === 0) { chartLegend.innerHTML = ""; return; }
-
-    chartLegend.innerHTML = periods.map(p => {
-        const color = MA_STYLE[p].color;
-        return `<button data-ma="${p}"><span class="dot" style="background:${color}"></span>${MA_STYLE[p].label}</button>`;
-    }).join("");
-
-    chartLegend.querySelectorAll("button").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const period = btn.dataset.ma;
-            const line = maSeries[period];
-            if (!line) return;
-            const nowOff = btn.classList.toggle("off");
-            line.applyOptions({ visible: !nowOff });
-        });
-    });
 }
 
 

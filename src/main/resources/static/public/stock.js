@@ -33,6 +33,12 @@
     const body = panel.querySelector("#stockBody");
     let opener = null;
     let current = null;
+    // 아래 함수들보다 먼저 선언해야 한다. 기업분석 페이지는 이 파일이 읽히자마자 그리기를 시작하는데,
+    // const/let 을 뒤에 두면 "초기화 전 접근" 으로 멈춘다(실제로 겪음)
+    /** 칸(창 본문·페이지)마다 차트 하나. 다시 그리기 전에 치워야 캔버스가 쌓이지 않는다 */
+    const charts = new Map();
+    /** 차트 라이브러리를 받는 중이거나 받은 약속. 한 번만 받는다 */
+    let chartLib = null;
 
     document.addEventListener("click", e => {
         const t = e.target.closest("[data-stock]");
@@ -59,11 +65,13 @@
     async function showOnPage(ticker) {
         document.getElementById("stockQuery").value = ticker;
         document.title = ticker + " 기업분석 | 포트폴리오 분석기";
+        disposeChart(page);
         page.innerHTML = '<p class="loading">불러오는 중… 처음 여는 종목은 공시를 읽느라 몇 초 걸립니다.</p>';
         try {
             const d = await getJson("/api/public/stocks/" + encodeURIComponent(ticker));
             page.innerHTML = `<div class="stock-page-head"><h2>${esc(d.ticker)}</h2><p class="stock-name">${esc(d.name || "")}</p></div>`
                 + build(d);
+            loadChart(page, d.ticker);
             loadAi(page, d.ticker);
         } catch (e) {
             page.innerHTML = '<p class="error">불러오지 못했습니다. 티커가 맞는지 확인하고 잠시 뒤 다시 열어 주세요.</p>';
@@ -105,6 +113,7 @@
         current = ticker;
         panel.querySelector("#stockTitle").textContent = ticker;
         panel.querySelector("#stockName").textContent = "";
+        disposeChart(body);
         body.innerHTML = '<p class="loading">불러오는 중… 처음 여는 종목은 공시를 읽느라 몇 초 걸립니다.</p>';
         panel.inert = false;
         document.body.classList.add("stock-open");
@@ -124,6 +133,7 @@
         document.body.classList.remove("stock-open");
         panel.inert = true;
         current = null;
+        disposeChart(body);   // 닫힌 창 안에 차트(캔버스·크기 감시)가 남지 않게
         history.replaceState(null, "", location.pathname + location.search);
         if (opener && document.contains(opener)) opener.focus();
     }
@@ -132,12 +142,78 @@
         panel.querySelector("#stockName").textContent = d.name || "";
         body.innerHTML = build(d)
             + `<p class="stock-foot"><a href="/public/company.html?t=${encodeURIComponent(d.ticker)}">기업분석 페이지로 크게 보기</a></p>`;
+        loadChart(body, d.ticker);
         loadAi(body, d.ticker);
     }
 
-    /** 창과 페이지가 같이 쓰는 본문. AI 칸은 비워 두고 loadAi 가 따로 채운다 */
+    // ── 차트 칸 (그리는 코드는 chart-view.js. 나의 포트폴리오와 같다) ──
+
+    function disposeChart(root) {
+        const c = charts.get(root);
+        if (c) {
+            c.dispose();
+            charts.delete(root);
+        }
+    }
+
+    /**
+     * 차트 라이브러리는 차트를 처음 그릴 때만 받는다(약 160KB).
+     * 공개 화면 대부분은 차트를 안 열어서, 모든 페이지에 미리 실으면 첫 화면만 느려진다
+     */
+    function ensureChartLib() {
+        if (window.LightweightCharts) return Promise.resolve(true);
+        if (!chartLib) {
+            chartLib = new Promise(resolve => {
+                const s = document.createElement("script");
+                s.src = "https://cdn.jsdelivr.net/npm/lightweight-charts@5.2.1/dist/lightweight-charts.standalone.production.js";
+                s.onload = () => resolve(true);
+                s.onerror = () => { chartLib = null; resolve(false); };
+                document.head.append(s);
+            });
+        }
+        return chartLib;
+    }
+
+    async function loadChart(root, ticker) {
+        const slot = root.querySelector(".chart-slot");
+        if (!slot) return;
+        const host = slot.querySelector(".stock-chart-host");
+        const say = text => { host.innerHTML = `<p class="muted chart-msg">${esc(text)}</p>`; };
+        if (!await ensureChartLib()) {
+            say("차트 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침해 주세요.");
+            return;
+        }
+        let data;
+        try {
+            const res = await fetch("/api/public/chart/" + encodeURIComponent(ticker), { headers: { "Accept": "application/json" } });
+            data = await res.json().catch(() => null);
+            if (!res.ok) {
+                say((data && data.error) || "차트를 불러오지 못했습니다.");
+                return;
+            }
+        } catch (e) {
+            say("차트를 불러오지 못했습니다.");
+            return;
+        }
+        if (!document.contains(host)) return;   // 그 사이 다른 종목을 열었거나 창을 닫았다
+        if (!data || !data.points || data.points.length < 2) {
+            say("차트를 그릴 데이터가 부족합니다.");
+            return;
+        }
+        disposeChart(root);
+        host.innerHTML = "";
+        const c = createStockChart({ host, legend: slot.querySelector(".chart-legend"), sub: slot.querySelector(".chart-sub") });
+        charts.set(root, c);
+        c.draw(data);
+    }
+
+    /** 창과 페이지가 같이 쓰는 본문. 차트·AI 칸은 비워 두고 loadChart·loadAi 가 따로 채운다 */
     function build(d) {
-        let html = `<section class="analysis-view ai-slot"><h3>AI 기업분석</h3>
+        let html = `<section class="analysis-view chart-slot"><h3>차트 <span class="muted">일봉 · 이동평균선</span></h3>
+            <div class="chart-legend"></div>
+            <div class="stock-chart-host"><p class="loading">차트 불러오는 중…</p></div>
+            <div class="chart-sub"></div></section>`;
+        html += `<section class="analysis-view ai-slot"><h3>AI 기업분석</h3>
             <div class="ai-body"><p class="loading">불러오는 중…</p></div></section>
             <h3 class="facts-title">공시와 13F 로 본 사실</h3>`;
         if (d.summary) html += `<p class="stock-summary">${esc(d.summary)}</p>`;
