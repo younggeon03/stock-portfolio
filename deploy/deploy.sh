@@ -37,19 +37,37 @@ monitoring_enabled() {
     grep -qx prometheus <<<"$services"
 }
 
+# .env 의 KEY 가 채워져 있나.
+# 빈 것으로 보는 경우: 값 없음, 공백만, 빈 따옴표("" ''), 공백 뒤 #(env.example 의 설명을 안 지우고 남긴 것).
+#   compose 는 "KEY=   # 설명" 을 '# 설명' 이라는 값으로 읽는다. 예전 검사(.+)는 이걸 통과시켜
+#   로그인 비밀번호가 설명 문장이 될 뻔했다(관측 PR 리허설에서 발견).
+#   OWNER_PASSWORD="" 도 예전 검사를 통과해 로그인이 꺼진 채 뜰 수 있었다(검수에서 발견).
+# 정상으로 보는 경우: "KEY=#abc" 처럼 # 이 바로 붙은 값. compose 도 값으로 읽는 정상 비밀번호다
+has_value() {
+    local line v
+    line=$(grep -E "^$1=" .env | tail -n 1) || return 1
+    v=${line#*=}
+    case "$v" in
+        ""|'""'|"''") return 1 ;;
+    esac
+    if [[ "$v" =~ ^[[:space:]]*$ || "$v" =~ ^[[:space:]]+# ]]; then
+        return 1
+    fi
+    return 0
+}
+
 # ── 띄우기 전 확인 ──
 # 운영에서 빠지면 조용히 위험해지는 값들. 에러가 안 나고 "열린 채로" 돈다
 preflight() {
     [ -f .env ] || { log ".env 가 없습니다. env.example 을 복사해 채우세요"; exit 1; }
     local missing=()
-    # 값이 공백이나 # 으로 시작하면 빈 것으로 본다. env.example 처럼 "KEY=   # 설명" 으로 남겨 두면 .+ 로는 통과해 버린다
     for k in DOMAIN COMPOSE_DB_PASSWORD COMPOSE_DB_ROOT_PASSWORD OWNER_PASSWORD TOKEN_ENCRYPTION_KEY; do
-        grep -qE "^${k}=[^[:space:]#]" .env || missing+=("$k")
+        has_value "$k" || missing+=("$k")
     done
     # 관측(Grafana)을 켠 서버에서만 필수. 1GB 서버처럼 관측을 끈 곳에서는 이 값 없이도 배포돼야 한다.
     # 켜졌는지는 compose 에게 묻는다(COMPOSE_PROFILES 가 .env 에 있든 셸 환경에 있든 compose 가 같은 규칙으로 읽는다)
     if [ ${#missing[@]} -eq 0 ] && monitoring_enabled; then
-        grep -qE "^GRAFANA_ADMIN_PASSWORD=[^[:space:]#]" .env || missing+=("GRAFANA_ADMIN_PASSWORD")
+        has_value GRAFANA_ADMIN_PASSWORD || missing+=("GRAFANA_ADMIN_PASSWORD")
     fi
     # OWNER_PASSWORD 가 비면 로그인이 꺼져 내 잔고가 공개된다(개발 모드). 서버에서는 절대 안 된다
     grep -qE '^COOKIE_SECURE=true' .env || missing+=("COOKIE_SECURE=true")
