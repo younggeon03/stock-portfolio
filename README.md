@@ -116,9 +116,9 @@ docker compose up -d --build # 앱 + MySQL
 | 차트 | TradingView Lightweight Charts |
 | 분석 | Anthropic Java SDK, 웹검색 도구 |
 | 외부 API | 토스증권 Open API, 나무증권 NAMUH PLUG, DART OpenAPI, SEC EDGAR |
-| 테스트 | JUnit 5, AssertJ, 142개 |
+| 테스트 | JUnit 5, AssertJ, 158개 |
 | 빌드·배포 | Docker, GitHub Actions (PR 마다 테스트·커버리지·이미지 빌드, `main` 병합 시 ghcr.io 에 이미지 게시) |
-| 운영 | Actuator 헬스체크·Prometheus 지표, Flyway 마이그레이션, 토큰 AES-GCM 암호화 |
+| 운영 | Actuator 헬스체크, Prometheus + Grafana 대시보드(서버 안에서만, SSH 터널), Flyway 마이그레이션, 토큰 AES-GCM 암호화 |
 
 프론트엔드에 프레임워크를 쓰지 않았습니다. 화면이 표 하나와 드로어 하나뿐이라 리액트를 얹으면 빌드 설정이 앱보다 커집니다. 외부 의존성은 차트 라이브러리 하나가 전부이고, 그마저 안 불러와지면 차트만 안 뜨고 나머지는 그대로 동작합니다.
 
@@ -139,7 +139,7 @@ docker compose up -d --build # 앱 + MySQL
 
 ## 문서
 
-다섯 개입니다. 처음이라면 이 README → [아키텍처](docs/아키텍처.md) 1~4장 → [결정기록 003](docs/결정기록.md#003-숫자는-앱이-계산하고-조사만-llm에게-맡긴다) 순서면 충분합니다.
+여섯 개입니다. 처음이라면 이 README → [아키텍처](docs/아키텍처.md) 1~4장 → [결정기록 003](docs/결정기록.md#003-숫자는-앱이-계산하고-조사만-llm에게-맡긴다) 순서면 충분합니다.
 
 | 문서 | 담는 것 | 언제 보나 | 언제 바뀌나 |
 |---|---|---|---|
