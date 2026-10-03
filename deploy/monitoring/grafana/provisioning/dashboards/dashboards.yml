@@ -1,0 +1,13 @@
+# ../../dashboards/*.json 을 대시보드로 올린다. 파일이 바뀌면 30초 안에 다시 읽는다(재시작 없음)
+apiVersion: 1
+
+providers:
+  - name: stock-portfolio
+    type: file
+    disableDeletion: true
+    # 화면에서 고쳐 저장하면 다음 배포 때 파일 내용으로 덮여서 고친 게 사라진다. 헷갈리지 않게 저장을 막는다.
+    # 고치려면 화면에서 만든 뒤 JSON 으로 내보내 이 저장소의 파일을 바꾼다
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards

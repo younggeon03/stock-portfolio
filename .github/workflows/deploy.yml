@@ -93,6 +93,8 @@ jobs:
         run: |
           ssh target 'mkdir -p ~/stock-portfolio'
           scp deploy/compose.yml deploy/Caddyfile deploy/env.example deploy/*.sh target:~/stock-portfolio/
+          # 관측 설정(Prometheus·Grafana). 없으면 서버에서 두 컨테이너가 설정 파일을 못 찾아 못 뜬다
+          scp -r deploy/monitoring target:~/stock-portfolio/
           ssh target 'chmod +x ~/stock-portfolio/*.sh'
 
       - name: 배포 (실패하면 서버가 앞 버전으로 되돌림)
