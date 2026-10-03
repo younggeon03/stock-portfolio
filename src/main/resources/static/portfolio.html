@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-kr@5.2.5/700.css">
     <link rel="stylesheet" href="/public/tokens.css">
     <link rel="stylesheet" href="/portfolio.css">
+    <link rel="stylesheet" href="/public/analysis.css">
     <link rel="stylesheet" href="/public/nav.css">
 
     <!--
@@ -119,7 +120,7 @@
 
 <!-- 종목 상세. 데스크톱은 오른쪽에서, 모바일은 아래에서 올라온다 -->
 <div id="drawerBackdrop"></div>
-<aside id="drawer" aria-label="종목 상세" inert>
+<aside id="drawer" class="analysis-view" aria-label="종목 상세" inert>
     <!--
       크기 조절 손잡이. 데스크톱은 왼쪽 모서리를 좌우로, 모바일은 위쪽 모서리를 위아래로 끈다.
       두 번 누르면 기본 크기(화면 절반)로 돌아간다.
@@ -191,6 +192,7 @@
     </div>
 </div>
 
+<script src="/public/analysis-view.js"></script>
 <script src="/portfolio.js"></script>
 <script src="/public/nav.js"></script>
 </body>

@@ -72,7 +72,7 @@ class CompanyAnalysisPromptBuilderTest {
         CompanyAnalysisFacts facts = new CompanyAnalysisFacts(
                 base.symbol(), base.name(), base.englishName(), base.marketCountry(), base.market(),
                 base.currency(), base.securityType(), base.leverageFactor(), base.sharesOutstanding(),
-                base.quantity(), base.lastPrice(), base.averagePurchasePrice(), base.priceGapPercent(),
+                true, base.quantity(), base.lastPrice(), base.averagePurchasePrice(), base.priceGapPercent(),
                 base.marketValueKrw(), base.purchaseKrw(), base.profitLossKrw(), base.profitRatePercent(),
                 base.weightPercent(), base.totalValueKrw(), base.brokers(),
                 base.annualizedVolatilityPercent(), base.dailyVolatilityPercent(), base.periodReturnPercent(),
@@ -110,7 +110,7 @@ class CompanyAnalysisPromptBuilderTest {
         CompanyAnalysisFacts facts = new CompanyAnalysisFacts(
                 "AVGO", "브로드컴", "Broadcom Inc.", "US", "NASDAQ", "USD", "STOCK", null,
                 new BigDecimal("4773629865"),
-                base.quantity(), new BigDecimal("363.5"), base.averagePurchasePrice(), base.priceGapPercent(),
+                true, base.quantity(), new BigDecimal("363.5"), base.averagePurchasePrice(), base.priceGapPercent(),
                 base.marketValueKrw(), base.purchaseKrw(), base.profitLossKrw(), base.profitRatePercent(),
                 base.weightPercent(), base.totalValueKrw(), base.brokers(),
                 null, null, null, null, null, null, List.of(), financials, base.asOf());
@@ -266,6 +266,31 @@ class CompanyAnalysisPromptBuilderTest {
         assertThat(system).contains("적정가 대신 **적정 비중**을 계산해라");
     }
 
+    /**
+     * 안 가진 종목은 현재가만 넣는다. 이 분석은 공개 화면에 나가므로
+     * 평단가·수량·손익·비중 줄이 하나라도 섞이면 안 된다.
+     */
+    @Test
+    void 안_가진_종목은_보유현황_없이_현재가만() {
+        CompanyAnalysisFacts base = soxl();
+        CompanyAnalysisFacts facts = new CompanyAnalysisFacts(
+                "MSFT", "마이크로소프트", "Microsoft Corporation", "US", "NASDAQ", "USD", "STOCK", null, null,
+                false, null, new BigDecimal("518.0"), null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, List.of(), null, base.asOf());
+
+        String prompt = builder.userPrompt(facts);
+
+        assertThat(prompt).contains("보유하지 않은 종목이다");
+        assertThat(prompt).contains("현재가: ");
+        assertThat(prompt).doesNotContain("내 평단가", "보유 수량", "평가손익", "전체 자산", "보유처");
+        assertThat(prompt).doesNotContain("POSITION_REVIEW 에서는 [보유현황] 의 숫자를 직접 인용해라");
+    }
+
+    @Test
+    void 안_가진_종목_규칙은_지시문에_있다() {
+        assertThat(builder.systemPrompt()).contains("## 보유하지 않은 종목").contains("applicable: false");
+    }
+
     // ── 테스트용 사실 만들기 ──────────────────────────────
 
     /** SOXL 한 종목에 몰린 계좌 (미국 ETF, 3배 레버리지, 비중 81%). 수량·금액은 데모 값 */
@@ -274,7 +299,7 @@ class CompanyAnalysisPromptBuilderTest {
                 "SOXL", "SOXL", "Direxion Daily Semiconductor Bull 3X Shares",
                 "US", "AMEX", "USD", "ETF",
                 new BigDecimal("3.0"), new BigDecimal("170800060"),
-                new BigDecimal("100"), new BigDecimal("122.25"), new BigDecimal("151.8182"),
+                true, new BigDecimal("100"), new BigDecimal("122.25"), new BigDecimal("151.8182"),
                 new BigDecimal("-19.47"),
                 new BigDecimal("16381500"), new BigDecimal("20343639"),
                 new BigDecimal("-3962139"), new BigDecimal("-19.47"),
@@ -293,7 +318,7 @@ class CompanyAnalysisPromptBuilderTest {
         return new CompanyAnalysisFacts(
                 "005380", "현대차", "HYUNDAI MOTOR", "KR", "KOSPI", "KRW", "STOCK",
                 null, new BigDecimal("204757766"),
-                new BigDecimal("5"), new BigDecimal("382000"), new BigDecimal("400000"),
+                true, new BigDecimal("5"), new BigDecimal("382000"), new BigDecimal("400000"),
                 new BigDecimal("-4.50"),
                 new BigDecimal("1910000"), new BigDecimal("2000000"),
                 new BigDecimal("-90000"), new BigDecimal("-4.50"),
@@ -312,7 +337,7 @@ class CompanyAnalysisPromptBuilderTest {
         return new CompanyAnalysisFacts(
                 base.symbol(), base.name(), base.englishName(), base.marketCountry(), base.market(),
                 base.currency(), base.securityType(), base.leverageFactor(), base.sharesOutstanding(),
-                base.quantity(), base.lastPrice(), null, null,
+                true, base.quantity(), base.lastPrice(), null, null,
                 base.marketValueKrw(), base.purchaseKrw(), base.profitLossKrw(), base.profitRatePercent(),
                 base.weightPercent(), base.totalValueKrw(), base.brokers(),
                 base.annualizedVolatilityPercent(), base.dailyVolatilityPercent(), base.periodReturnPercent(),
@@ -325,7 +350,7 @@ class CompanyAnalysisPromptBuilderTest {
         return new CompanyAnalysisFacts(
                 base.symbol(), base.name(), base.englishName(), base.marketCountry(), base.market(),
                 base.currency(), base.securityType(), base.leverageFactor(), base.sharesOutstanding(),
-                base.quantity(), base.lastPrice(), base.averagePurchasePrice(), base.priceGapPercent(),
+                true, base.quantity(), base.lastPrice(), base.averagePurchasePrice(), base.priceGapPercent(),
                 base.marketValueKrw(), base.purchaseKrw(), base.profitLossKrw(), base.profitRatePercent(),
                 base.weightPercent(), base.totalValueKrw(), base.brokers(),
                 null, null, null, null, null, null, base.riskFlags(), base.financials(), base.asOf());

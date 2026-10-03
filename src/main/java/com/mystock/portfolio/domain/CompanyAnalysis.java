@@ -89,6 +89,14 @@ public class CompanyAnalysis {
     @Column(name = "web_search_count")
     private Integer webSearchCount;
 
+    /**
+     * 저장된 분석에 내 평단가·수량·손익이 들어갔나.
+     * true 면 로그인한 나에게만 보인다. 안 가진 종목을 현재가만으로 분석한 것(false)만 공개 화면에 나간다.
+     * 분석이 저장될 때 같이 바뀐다. 돌리는 중에는 바꾸지 않는다(그 사이 옛 분석 본문이 그대로 남아 있으므로)
+     */
+    @Column(name = "includes_position", nullable = false)
+    private boolean includesPosition = true;
+
     protected CompanyAnalysis() {
         // JPA 기본 생성자
     }
@@ -110,7 +118,9 @@ public class CompanyAnalysis {
 
     /** 분석에 성공했다. 결과를 갈아끼운다. */
     public void markSuccess(String analysisJson, String model,
-                            Integer inputTokens, Integer outputTokens, Integer webSearchCount) {
+                            Integer inputTokens, Integer outputTokens, Integer webSearchCount,
+                            boolean includesPosition) {
+        this.includesPosition = includesPosition;
         this.analysisJson = analysisJson;
         this.model = model;
         this.inputTokens = inputTokens;
@@ -191,5 +201,9 @@ public class CompanyAnalysis {
 
     public Integer getWebSearchCount() {
         return webSearchCount;
+    }
+
+    public boolean isIncludesPosition() {
+        return includesPosition;
     }
 }

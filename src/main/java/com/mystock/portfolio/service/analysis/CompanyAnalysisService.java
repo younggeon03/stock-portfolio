@@ -9,6 +9,7 @@ import com.mystock.portfolio.external.anthropic.ClaudeCallResult;
 import com.mystock.portfolio.external.filing.FilingService;
 import com.mystock.portfolio.external.filing.CompanyFinancials;
 import com.mystock.portfolio.external.toss.TossMarketDataService;
+import com.mystock.portfolio.external.toss.dto.TossPrice;
 import com.mystock.portfolio.external.toss.dto.TossStockInfo;
 import com.mystock.portfolio.service.TossAnalysisService;
 import com.mystock.portfolio.service.TossAnalysisView;
@@ -198,7 +199,8 @@ public class CompanyAnalysisService {
             // 저장하기 전에 파싱이 되는지 확인한다. 깨진 JSON 을 저장해두면 화면이 못 읽는다.
             parseAndNormalize(result.analysisJson(), symbol);
 
-            store.saveSuccess(symbol, result);
+            // 평단가가 들어간 분석인지 같이 남긴다. 공개 화면은 들어가지 않은 것만 보여준다
+            store.saveSuccess(symbol, result, facts.held());
             log.info("{} 기업분석 저장 완료", symbol);
 
         } catch (Exception e) {
@@ -213,17 +215,33 @@ public class CompanyAnalysisService {
         // 비중은 반드시 전체 합산 기준으로 구한다
         UnifiedPortfolioView portfolio = portfolioService.load(UnifiedPortfolioService.SCOPE_ALL, ownerKey);
 
+        // 안 가진 종목도 분석한다(기업분석 화면에서 아무 종목이나 연다). 그때는 평단가 없이 현재가만으로
         UnifiedPortfolioView.Item item = portfolio.items().stream()
                 .filter(i -> i.symbol().equalsIgnoreCase(symbol))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("보유 중인 종목이 아닙니다: " + symbol));
+                .orElse(null);
+        boolean held = item != null;
+        String sym = held ? item.symbol() : symbol;
 
-        // 종목 기본 정보 (ETF 여부·레버리지). 실패해도 분석은 진행한다.
+        // 종목 기본 정보 (ETF 여부·레버리지). 가진 종목은 실패해도 분석은 진행한다.
         TossStockInfo stockInfo = null;
         try {
-            stockInfo = marketDataService.stockInfo(item.symbol());
+            stockInfo = marketDataService.stockInfo(sym);
         } catch (Exception e) {
             log.warn("{} 종목 기본정보 조회 실패(계속 진행): {}", symbol, e.getMessage());
+        }
+
+        // 안 가진 종목은 이름·시장·현재가를 포트폴리오에서 못 얻는다. 토스에서 받는다
+        String name = held ? item.name() : stockInfo == null ? sym : stockInfo.name();
+        String country = held ? item.marketCountry() : FilingService.guessCountry(sym);
+        String currency = held ? item.currency()
+                : stockInfo != null && stockInfo.currency() != null ? stockInfo.currency()
+                : "KR".equals(country) ? "KRW" : "USD";
+        BigDecimal lastPrice = held ? item.lastPrice() : currentPrice(sym);
+        if (!held && lastPrice == null) {
+            // 현재가도 없으면 분석할 근거가 없다. 돈을 쓰기 전에 멈춘다
+            throw new IllegalArgumentException("현재가를 받지 못해 분석할 수 없습니다: " + symbol
+                    + " (티커가 맞는지, 토스 허용 IP 가 등록돼 있는지 확인하세요)");
         }
 
         // 시세 통계. 실패해도 분석은 진행한다 (토스 호출 한도에 걸려도 막히면 안 된다).
@@ -234,7 +252,7 @@ public class CompanyAnalysisService {
         BigDecimal high = null;
         BigDecimal low = null;
         try {
-            List<TossAnalysisView.Volatility> vols = analysisService.volatilities(List.of(item.symbol()), CANDLE_DAYS);
+            List<TossAnalysisView.Volatility> vols = analysisService.volatilities(List.of(sym), CANDLE_DAYS);
             if (!vols.isEmpty() && vols.get(0).error() == null) {
                 TossAnalysisView.Volatility v = vols.get(0);
                 annualVol = v.annualizedVolatilityPercent();
@@ -243,7 +261,7 @@ public class CompanyAnalysisService {
                 dataPoints = v.dataPoints();
             }
 
-            TossAnalysisView.Chart chart = analysisService.chart(item.symbol(), CANDLE_DAYS);
+            TossAnalysisView.Chart chart = analysisService.chart(sym, CANDLE_DAYS);
             if (chart.points() != null && !chart.points().isEmpty()) {
                 high = chart.points().stream().map(TossAnalysisView.Chart.Point::close)
                         .max(Comparator.naturalOrder()).orElse(null);
@@ -254,48 +272,59 @@ public class CompanyAnalysisService {
             log.warn("{} 시세 통계 조회 실패(계속 진행): {}", symbol, e.getMessage());
         }
 
-        String brokers = item.lots().stream()
+        String brokers = !held ? null : item.lots().stream()
                 .map(UnifiedPortfolioView.Lot::brokerName)
                 .distinct()
                 .reduce((a, b) -> a + " + " + b)
                 .orElse("-");
 
-        BigDecimal priceGap = priceGapPercent(item.lastPrice(), item.averagePurchasePrice());
-
+        // 안 가진 종목이면 보유 값은 전부 비운다. 0 을 넣으면 모델이 "0주 보유" 로 읽는다
         return new CompanyAnalysisFacts(
-                item.symbol(),
-                item.name(),
+                sym,
+                name,
                 stockInfo == null ? null : stockInfo.englishName(),
-                item.marketCountry(),
-                stockInfo == null ? item.marketCountry() : stockInfo.market(),
-                item.currency(),
+                country,
+                stockInfo == null ? country : stockInfo.market(),
+                currency,
                 stockInfo == null ? "UNKNOWN" : stockInfo.securityType(),
                 stockInfo == null ? null : stockInfo.leverageFactor(),
                 stockInfo == null ? null : stockInfo.sharesOutstanding(),
-                item.quantity(),
-                item.lastPrice(),
-                item.averagePurchasePrice(),
-                priceGap,
-                item.marketValueKrw(),
-                item.purchaseKrw(),
-                item.profitLossKrw(),
-                item.profitRatePercent(),
-                item.weightPercent(),
-                portfolio.totalValueKrw(),
+                held,
+                held ? item.quantity() : null,
+                lastPrice,
+                held ? item.averagePurchasePrice() : null,
+                held ? priceGapPercent(item.lastPrice(), item.averagePurchasePrice()) : null,
+                held ? item.marketValueKrw() : null,
+                held ? item.purchaseKrw() : null,
+                held ? item.profitLossKrw() : null,
+                held ? item.profitRatePercent() : null,
+                held ? item.weightPercent() : null,
+                held ? portfolio.totalValueKrw() : null,
                 brokers,
                 annualVol, dailyVol, periodReturn, dataPoints, high, low,
                 riskFlags(item, stockInfo, annualVol),
-                financials(item, stockInfo),
+                financials(sym, country, stockInfo, lastPrice),
                 LocalDateTime.now());
+    }
+
+    /** 안 가진 종목의 현재가. 못 받으면 null */
+    private BigDecimal currentPrice(String symbol) {
+        try {
+            List<TossPrice> prices = marketDataService.prices(List.of(symbol));
+            return prices.isEmpty() ? null : prices.get(0).lastPrice();
+        } catch (Exception e) {
+            log.warn("{} 현재가 조회 실패: {}", symbol, e.getMessage());
+            return null;
+        }
     }
 
     /**
      * 공시 재무. 한국은 DART, 미국은 SEC EDGAR. ETF 는 재무가 없어 부르지 않는다.
      * 실패해도 null 을 돌려줄 뿐 분석은 진행한다.
      */
-    private CompanyFinancials financials(UnifiedPortfolioView.Item item, TossStockInfo info) {
-        return filingService.find(item.symbol(), item.marketCountry(), info != null && info.isFund(),
-                info == null ? null : info.sharesOutstanding(), item.lastPrice()).orElse(null);
+    private CompanyFinancials financials(String symbol, String country, TossStockInfo info, BigDecimal price) {
+        return filingService.find(symbol, country, info != null && info.isFund(),
+                info == null ? null : info.sharesOutstanding(), price).orElse(null);
     }
 
     /** 평단가 대비 현재가가 몇 퍼센트인지 */
@@ -318,7 +347,8 @@ public class CompanyAnalysisService {
     private List<String> riskFlags(UnifiedPortfolioView.Item item, TossStockInfo info, BigDecimal annualVol) {
         List<String> flags = new ArrayList<>();
 
-        if (item.weightPercent() != null
+        // item 이 null 이면 안 가진 종목이다. 비중·손실처럼 내 보유에서 나오는 신호는 건너뛴다
+        if (item != null && item.weightPercent() != null
                 && item.weightPercent().compareTo(CONCENTRATION_THRESHOLD) > 0) {
             flags.add("이 한 종목이 전체 자산의 " + item.weightPercent().stripTrailingZeros().toPlainString()
                     + "% 를 차지한다. 단일 종목 집중 위험이 크다.");
@@ -350,7 +380,7 @@ public class CompanyAnalysisService {
                     + "% 로 매우 높다. 단기간에 큰 폭으로 움직일 수 있다.");
         }
 
-        if (item.profitRatePercent() != null
+        if (item != null && item.profitRatePercent() != null
                 && item.profitRatePercent().compareTo(BigDecimal.valueOf(-20)) < 0) {
             flags.add("평가손실이 " + item.profitRatePercent().stripTrailingZeros().toPlainString()
                     + "% 다. 손실 구간에서의 판단임을 감안해야 한다.");
@@ -390,7 +420,26 @@ public class CompanyAnalysisService {
                 entity.getInputTokens(),
                 entity.getOutputTokens(),
                 entity.getWebSearchCount(),
+                entity.hasAnalysis() ? entity.isIncludesPosition() : null,
                 view);
+    }
+
+    /**
+     * 공개 화면용. 내 평단가가 들어가지 않은 분석(안 가진 종목을 현재가만으로 본 것)만 돌려준다.
+     *
+     * ★ 들어간 분석이 있어도 "있다" 는 사실조차 알리지 않고 NONE 으로 답한다.
+     *   "비공개 분석이 있음" 을 보이면 그 자체로 내가 그 종목을 가졌다는 정보가 샌다.
+     * 돌리는 중(RUNNING)·실패 사유도 숨긴다. 같은 이유와, 실패 메시지에 무엇이 들어갈지 모르기 때문이다.
+     */
+    public CompanyAnalysisResponse findPublic(String symbol) {
+        return store.find(symbol)
+                .filter(e -> e.hasAnalysis() && !e.isIncludesPosition())
+                .map(this::toResponse)
+                .filter(r -> r.analysis() != null)
+                .map(r -> new CompanyAnalysisResponse(r.symbol(), CompanyAnalysis.STATUS_OK, r.analyzedAt(),
+                        r.stale(), r.ageDays(), null, r.disclaimer(), r.model(), null, null,
+                        r.webSearchCount(), false, r.analysis()))
+                .orElseGet(() -> CompanyAnalysisResponse.none(symbol));
     }
 
     /**

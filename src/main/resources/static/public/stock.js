@@ -1,7 +1,10 @@
 /*
  * 공개 종목 창(기업분석). 공개 화면 어디서든 data-stock="MSFT" 가 달린 것을 누르면 오른쪽에서 열린다.
  * 내용은 /api/public/stocks/{티커} 하나로 받는다: 공시 재무, 앱이 규칙으로 만든 "읽을 점", 기관 10곳의 움직임.
- * 0원이고 판정·적정가는 없다(공개 화면이라). site.js 의 esc·usd·pct·quarter·kindTag 를 쓴다.
+ * 맨 위 "AI 기업분석" 칸은 나의 포트폴리오의 기업분석과 같은 것이다(그리는 코드도 analysis-view.js 로 같다).
+ *   - 로그인한 나: 전부 보이고 실행·다시 분석 버튼이 있다. 가진 종목은 평단가 기준, 안 가진 종목은 현재가만으로 분석된다
+ *   - 방문자: 현재가만으로 분석한 것만 보인다. 평단가가 들어간 분석은 서버가 "없음" 으로 답한다
+ * 그 아래 칸들(읽을 점·공시 재무·기관)은 0원 사실이다. site.js 의 esc·usd·pct·quarter·kindTag 를 쓴다.
  *
  * 주소에 #stock=MSFT 를 남긴다. 링크를 보내면 받은 사람도 같은 창이 열린 채로 본다.
  */
@@ -61,6 +64,7 @@
             const d = await getJson("/api/public/stocks/" + encodeURIComponent(ticker));
             page.innerHTML = `<div class="stock-page-head"><h2>${esc(d.ticker)}</h2><p class="stock-name">${esc(d.name || "")}</p></div>`
                 + build(d);
+            loadAi(page, d.ticker);
         } catch (e) {
             page.innerHTML = '<p class="error">불러오지 못했습니다. 티커가 맞는지 확인하고 잠시 뒤 다시 열어 주세요.</p>';
         }
@@ -128,11 +132,14 @@
         panel.querySelector("#stockName").textContent = d.name || "";
         body.innerHTML = build(d)
             + `<p class="stock-foot"><a href="/public/company.html?t=${encodeURIComponent(d.ticker)}">기업분석 페이지로 크게 보기</a></p>`;
+        loadAi(body, d.ticker);
     }
 
-    /** 창과 페이지가 같이 쓰는 본문 */
+    /** 창과 페이지가 같이 쓰는 본문. AI 칸은 비워 두고 loadAi 가 따로 채운다 */
     function build(d) {
-        let html = "";
+        let html = `<section class="analysis-view ai-slot"><h3>AI 기업분석</h3>
+            <div class="ai-body"><p class="loading">불러오는 중…</p></div></section>
+            <h3 class="facts-title">공시와 13F 로 본 사실</h3>`;
         if (d.summary) html += `<p class="stock-summary">${esc(d.summary)}</p>`;
 
         if (d.notes && d.notes.length) {
@@ -197,5 +204,84 @@
             <p class="muted">${m.institutions.length}곳 중 ${held.length}곳이 들고 있습니다. 비중은 각 기관 13F 합계 대비, 변화는 주식 수 기준 바로 앞 분기 대비입니다.</p>
             <table><thead><tr><th scope="col">기관</th><th scope="col" class="r">비중</th><th scope="col" class="r">변화</th></tr></thead>
             <tbody>${rows}</tbody></table></section>`;
+    }
+
+    // ── AI 기업분석 칸 ──
+
+    /** 나(운영자)인가. /api/me 가 200 이면. 한 번만 묻는다. 응답 본문을 다 읽어야 연결이 안 남는다 */
+    let ownerPromise = null;
+    function isOwner() {
+        if (!ownerPromise) {
+            ownerPromise = fetch("/api/me", { headers: { "Accept": "application/json" } })
+                .then(res => res.text().then(() => res.ok))
+                .catch(() => false);
+        }
+        return ownerPromise;
+    }
+
+    async function loadAi(root, ticker) {
+        const box = root.querySelector(".ai-body");
+        if (!box) return;
+        const owner = await isOwner();
+        let data;
+        try {
+            // 나에게는 평단가가 들어간 분석까지 전부, 방문자에게는 공개해도 되는 것만
+            data = await getJson((owner ? "/api/analysis/" : "/api/public/analysis/") + encodeURIComponent(ticker));
+        } catch (e) {
+            box.innerHTML = '<p class="muted">AI 기업분석을 불러오지 못했습니다.</p>';
+            return;
+        }
+        if (document.contains(box)) paintAi(box, ticker, data, owner);
+    }
+
+    function paintAi(box, ticker, data, owner) {
+        const run = (label, refresh) => !owner ? "" :
+            `<p class="ai-actions"><button type="button" class="primary ai-run" data-refresh="${refresh}">${label}</button>
+             <span class="muted">1회 800~1,600원 · 2~5분</span></p>`;
+        if (!data || data.status === "NONE") {
+            box.innerHTML = (owner
+                ? '<p class="muted">아직 분석하지 않았습니다. 가진 종목이면 평단가 기준으로, 안 가진 종목이면 평단가 없이 현재가만으로 분석합니다.</p>'
+                : '<p class="muted">아직 AI 기업분석이 없습니다. 아래는 공시와 13F 로 본 사실입니다.</p>') + run("AI 기업분석 실행", false);
+        } else if (data.status === "RUNNING") {
+            box.innerHTML = '<p class="loading">클로드가 웹 검색으로 조사하고 있습니다. 보통 2~5분 걸립니다. 닫아도 계속됩니다.</p>';
+            // 끝날 때까지 8초마다 다시 묻는다. 창을 닫거나 다른 종목을 열면(칸이 사라지면) 멈춘다
+            setTimeout(() => { if (document.contains(box)) loadAi(box.parentElement, ticker); }, 8000);
+        } else {
+            const c = analysisContentHtml(data);
+            box.innerHTML = (c.meta ? `<p class="ai-meta">${esc(c.meta)}</p>` : "") + run("다시 분석", true) + c.html;
+            bindPeriodToggles(box);
+        }
+        const btn = box.querySelector(".ai-run");
+        if (btn) btn.addEventListener("click", () => runAi(box, ticker, btn.dataset.refresh === "true"));
+    }
+
+    /** 돈이 드는 호출. 나에게만 버튼이 보이고, 서버도 로그인 없이는 막는다(401) */
+    async function runAi(box, ticker, refresh) {
+        box.innerHTML = '<p class="loading">분석을 시작합니다…</p>';
+        const headers = { "Accept": "application/json" };
+        const token = readCookie("XSRF-TOKEN");   // POST 는 CSRF 토큰이 있어야 한다
+        if (token) headers["X-XSRF-TOKEN"] = token;
+        try {
+            // 나의 포트폴리오가 쓰는 식별값. 직접 입력한 종목까지 "가진 종목" 으로 보려고
+            const key = localStorage.getItem("portfolioOwnerKey");
+            if (key) headers["X-Owner-Key"] = key;
+        } catch (e) { /* 저장소를 못 쓰는 브라우저. 증권사 보유만으로 판단한다 */ }
+        try {
+            const res = await fetch("/api/analysis/" + encodeURIComponent(ticker) + (refresh ? "?refresh=true" : ""),
+                { method: "POST", headers });
+            const data = await res.json().catch(() => null);
+            if (!res.ok) {
+                box.innerHTML = `<p class="error">${esc((data && (data.error || data.message)) || "분석을 시작하지 못했습니다 (" + res.status + ")")}</p>`;
+                return;
+            }
+            paintAi(box, ticker, data, true);
+        } catch (e) {
+            box.innerHTML = '<p class="error">분석을 시작하지 못했습니다.</p>';
+        }
+    }
+
+    function readCookie(name) {
+        const hit = document.cookie.split("; ").find(c => c.startsWith(name + "="));
+        return hit ? decodeURIComponent(hit.substring(name.length + 1)) : null;
     }
 })();
