@@ -1,0 +1,9 @@
+# 텔레그램 값(TELEGRAM_BOT_TOKEN·TELEGRAM_CHAT_ID)이 없을 때 쓰는 설정.
+# 어디로도 보내지 않는다. 경보는 Alertmanager 화면(SSH 터널 9093)과 Prometheus 의 Alerts 탭에서만 보인다
+
+route:
+  receiver: nowhere
+  group_by: [alertname, client_name]
+
+receivers:
+  - name: nowhere

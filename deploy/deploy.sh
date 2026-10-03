@@ -126,13 +126,20 @@ fi
 if monitoring_enabled; then
     # 컨테이너가 새로 만들어졌는지 보려고 앞뒤 ID 를 비교한다
     prom_before="$(docker compose ps -q prometheus 2>/dev/null || true)"
+    am_before="$(docker compose ps -q alertmanager 2>/dev/null || true)"
     # compose.yml 이 안 바뀌었으면 아무것도 안 한다(재생성 없음). 바뀌었으면 그 컨테이너만 다시 만든다
-    docker compose up -d --no-deps prometheus grafana >/dev/null || log "경고: 관측 컨테이너를 못 띄움 (앱 배포는 계속)"
+    docker compose up -d --no-deps prometheus grafana alertmanager >/dev/null || log "경고: 관측 컨테이너를 못 띄움 (앱 배포는 계속)"
     prom_after="$(docker compose ps -q prometheus 2>/dev/null || true)"
-    # prometheus.yml 은 파일만 바뀌어서 compose 가 모른다. 같은 컨테이너면 SIGHUP 으로 다시 읽힌다.
+    am_after="$(docker compose ps -q alertmanager 2>/dev/null || true)"
+    # prometheus.yml·alerts.yml 은 파일만 바뀌어서 compose 가 모른다. 같은 컨테이너면 SIGHUP 으로 다시 읽힌다.
     # 방금 새로 만든 컨테이너에는 보내지 않는다. 신호 처리기를 달기 전에 받으면 프로세스가 그냥 죽는다(어차피 새 파일을 읽고 떴다)
     if [ -n "$prom_before" ] && [ "$prom_before" = "$prom_after" ]; then
         docker compose kill -s SIGHUP prometheus >/dev/null 2>&1 || true
+    fi
+    # Alertmanager 설정은 시작할 때 만들어진다(텔레그램 값 → /tmp). 그래서 리로드가 아니라 재시작이 맞다.
+    # 상태(보낸 기록)는 볼륨에 있어 재시작해도 같은 경보를 또 보내지 않는다
+    if [ -n "$am_before" ] && [ "$am_before" = "$am_after" ]; then
+        docker compose restart alertmanager >/dev/null 2>&1 || true
     fi
 fi
 

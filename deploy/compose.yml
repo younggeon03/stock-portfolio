@@ -66,7 +66,7 @@ services:
     logging: *logging
 
   # ── 관측(선택) ── .env 의 COMPOSE_PROFILES=monitoring 일 때만 뜬다.
-  # 1GB 서버에서는 앱+DB 만으로 빠듯해서 끌 수 있어야 한다. 끄면 아래 두 서비스는 compose 가 없는 것처럼 다룬다.
+  # 1GB 서버에서는 앱+DB 만으로 빠듯해서 끌 수 있어야 한다. 끄면 아래 세 서비스(prometheus·grafana·alertmanager)는 compose 가 없는 것처럼 다룬다.
   #
   # 포트는 반드시 127.0.0.1 에만 묶는다. 도커가 publish 한 포트는 iptables 의 DOCKER 체인(nat PREROUTING)에서
   # 먼저 처리돼서 호스트 방화벽(INPUT 규칙, ufw 등)을 거치지 않는다. 0.0.0.0 으로 열면 방화벽을 막아 둬도
@@ -85,6 +85,8 @@ services:
       # 설정 리로드는 deploy.sh 가 SIGHUP 으로 한다
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # 알림 규칙. 바꾸면 deploy.sh 의 SIGHUP 으로 같이 다시 읽힌다
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus-data:/prometheus
     ports:
       - "127.0.0.1:${PROM_HOST_PORT:-9090}:9090"
@@ -126,9 +128,45 @@ services:
     mem_limit: 256m
     logging: *logging
 
+  alertmanager:
+    # Prometheus 가 넘긴 경보를 묶고 텔레그램으로 보낸다. ARM(오라클) 이미지 확인함
+    image: prom/alertmanager:v0.30.0
+    profiles: [monitoring]
+    # 텔레그램 값이 둘 다 있으면 telegram.yml, 아니면 quiet.yml(보내지 않고 쌓기만).
+    # 봇 토큰은 파일로만 넘긴다. 설정 파일·명령줄(ps 로 보임)에 토큰이 남지 않게.
+    # chat_id 는 숫자(그룹은 음수)만 받는다. 그 밖의 글자가 sed 로 설정에 끼어들지 못하게 먼저 거른다
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        cfg=/etc/alertmanager/conf/quiet.yml
+        case "$$TELEGRAM_CHAT_ID" in
+          ""|*[!0-9-]*) [ -n "$$TELEGRAM_CHAT_ID" ] && echo "TELEGRAM_CHAT_ID 가 숫자가 아니라 텔레그램으로 보내지 않습니다" >&2 ;;
+          *) if [ -n "$$TELEGRAM_BOT_TOKEN" ]; then
+               printf '%s' "$$TELEGRAM_BOT_TOKEN" > /tmp/bot_token
+               sed "s/__CHAT_ID__/$$TELEGRAM_CHAT_ID/" /etc/alertmanager/conf/telegram.yml > /tmp/alertmanager.yml
+               cfg=/tmp/alertmanager.yml
+             fi ;;
+        esac
+        echo "Alertmanager 설정: $$cfg"
+        exec /bin/alertmanager --config.file="$$cfg" --storage.path=/alertmanager --web.listen-address=:9093
+    environment:
+      TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN:-}"
+      TELEGRAM_CHAT_ID: "${TELEGRAM_CHAT_ID:-}"
+    volumes:
+      - ./monitoring/alertmanager:/etc/alertmanager/conf:ro
+      # 보낸 기록·무음 설정. 재시작해도 같은 경보를 또 보내지 않게 남긴다
+      - alertmanager-data:/alertmanager
+    ports:
+      - "127.0.0.1:${ALERTMANAGER_HOST_PORT:-9093}:9093"
+    restart: unless-stopped
+    mem_limit: 64m
+    logging: *logging
+
 volumes:
   mysql-data:
   caddy-data:
   caddy-config:
   prometheus-data:
   grafana-data:
+  alertmanager-data:
