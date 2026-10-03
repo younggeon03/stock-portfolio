@@ -34,10 +34,12 @@ public class OpenFigiClient {
     private final ObjectMapper objectMapper;
     private final boolean hasKey;
 
-    public OpenFigiClient(ObjectMapper objectMapper, @Value("${openfigi.api-key:}") String apiKey) {
+    public OpenFigiClient(ObjectMapper objectMapper, @Value("${openfigi.api-key:}") String apiKey,
+                          RestClient.Builder builder) {
         this.objectMapper = objectMapper;
         this.hasKey = apiKey != null && !apiKey.isBlank();
-        RestClient.Builder builder = RestClient.builder().defaultHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE);
+        // 주입받은 Builder 라야 호출 지표가 남는다(HttpClientObservationConfig)
+        builder.defaultHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE);
         if (hasKey) {
             builder.defaultHeader("X-OPENFIGI-APIKEY", apiKey.strip());
         }
