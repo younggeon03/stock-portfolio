@@ -299,3 +299,7 @@ main > .kicker:first-child { margin-top: var(--s-7); }
 @media (max-width: 700px) {
     .stock-chart-host { height: 260px; }
 }
+
+/* 큰 기관 표 아래 "모두 보기". 처음에는 위 100줄만 받는다 */
+.more-rows { margin: var(--s-3) 0 0; display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; font-size: 13px; }
+.more-rows button { min-height: 40px; }

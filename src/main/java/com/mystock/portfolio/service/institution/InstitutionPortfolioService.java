@@ -8,6 +8,9 @@ import com.mystock.portfolio.domain.Holding13F;
 import com.mystock.portfolio.domain.Holding13FRepository;
 import com.mystock.portfolio.domain.Institution;
 import com.mystock.portfolio.domain.InstitutionRepository;
+import com.mystock.portfolio.external.thirteenf.NewFilingEvent;
+import com.mystock.portfolio.external.thirteenf.ThirteenFDataChangedEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,8 +60,35 @@ public class InstitutionPortfolioService {
                 .toList();
     }
 
+    // ── 조회 캐시 ──
+    /*
+     * ★ 왜 캐시하나 (부하 테스트에서 찾음, 운영 문서 "부하 테스트")
+     * 13F 는 하루 한 번(07:00 배치)만 바뀐다. 그런데 "같이 산 종목" 은 요청마다 9곳 × 두 분기 보유(수만 줄)를
+     * DB 에서 읽어 비교해 한 번에 1.5~2초가 걸렸고, 동시 사용자 30명에서 p95 가 8초를 넘었다.
+     * 그래서 계산 결과를 메모리에 두고, 배치가 데이터를 바꾸면(이벤트) 통째로 비운다. 시간으로 만료시키지 않는다 —
+     * 언제 바뀌는지 정확히 알기 때문에 묵은 값을 줄 일이 없다.
+     * 크기는 64개로 묶는다(오래 안 쓴 것부터 버림). 아무 period 나 넣는 요청으로 메모리가 차지 않게
+     */
+    private final QueryCache cache = new QueryCache(64);
+
+    /** 배치가 끝났거나 새 제출을 저장했다 → 비운다 */
+    @EventListener({ThirteenFDataChangedEvent.class, NewFilingEvent.class})
+    public void onDataChanged() {
+        cache.clear();
+    }
+
     /** 한 기관의 한 분기 보유. period 가 없으면 최신 분기 */
     public Optional<HoldingsView> holdings(long cik, LocalDate period) {
+        return holdings(cik, period, 0);
+    }
+
+    /** limit 이 0 이하면 전부. 피델리티처럼 5천 줄이 넘는 기관은 화면이 먼저 위 100줄만 받는다 */
+    public Optional<HoldingsView> holdings(long cik, LocalDate period, int limit) {
+        Optional<HoldingsView> all = cache.get("holdings:" + cik + ":" + period, () -> loadHoldings(cik, period));
+        return all.map(v -> v.limited(limit));
+    }
+
+    private Optional<HoldingsView> loadHoldings(long cik, LocalDate period) {
         Optional<Institution> inst = institutions.findById(cik);
         if (inst.isEmpty()) {
             return Optional.empty();
@@ -84,7 +114,7 @@ public class InstitutionPortfolioService {
 
         return Optional.of(new HoldingsView(InstitutionView.of(inst.get(), filing.get(),
                 fs.stream().map(Filing13F::getReportPeriod).toList()),
-                filing.get().getReportPeriod(), filing.get().getFiledDate(), total, out));
+                filing.get().getReportPeriod(), filing.get().getFiledDate(), total, out, out.size()));
     }
 
     /**
@@ -92,6 +122,16 @@ public class InstitutionPortfolioService {
      * 앞 분기가 없으면(처음 받은 분기) 비어 있다.
      */
     public Optional<ChangesView> changes(long cik, LocalDate period) {
+        return changes(cik, period, 0);
+    }
+
+    /** limit 이 0 이하면 전부. counts(종류별 개수)는 limit 과 상관없이 전체 기준이다 */
+    public Optional<ChangesView> changes(long cik, LocalDate period, int limit) {
+        Optional<ChangesView> all = cache.get("changes:" + cik + ":" + period, () -> loadChanges(cik, period));
+        return all.map(v -> v.limited(limit));
+    }
+
+    private Optional<ChangesView> loadChanges(long cik, LocalDate period) {
         Optional<Institution> inst = institutions.findById(cik);
         if (inst.isEmpty()) {
             return Optional.empty();
@@ -110,7 +150,7 @@ public class InstitutionPortfolioService {
         List<HoldingDiff.Change> moved = all.stream().filter(c -> c.kind() != HoldingDiff.Kind.UNCHANGED).toList();
         return Optional.of(new ChangesView(
                 InstitutionView.of(inst.get(), now, fs.stream().map(Filing13F::getReportPeriod).toList()),
-                now.getReportPeriod(), before.getReportPeriod(), counts, moved));
+                now.getReportPeriod(), before.getReportPeriod(), counts, moved, moved.size()));
     }
 
     /**
@@ -123,6 +163,10 @@ public class InstitutionPortfolioService {
      * 사실을 세기만 한다. "따라 사라" 는 뜻이 아니다. 13F 는 45일 늦은 자료다.
      */
     public ConsensusView consensus(LocalDate period, int limit) {
+        return cache.get("consensus:" + period + ":" + limit, () -> loadConsensus(period, limit));
+    }
+
+    private ConsensusView loadConsensus(LocalDate period, int limit) {
         List<Institution> active = institutions.findByActiveTrueOrderBySortOrder();
         Map<Long, List<Filing13F>> byInst = new LinkedHashMap<>();
         active.forEach(i -> byInst.put(i.getCik(), visible(i.getCik())));
@@ -345,9 +389,19 @@ public class InstitutionPortfolioService {
         }
     }
 
-    /** 한 기관의 분기 변화. counts 에는 그대로(UNCHANGED)도 세지만 changes 목록에는 바뀐 것만 */
+    /**
+     * 한 기관의 분기 변화. counts 에는 그대로(UNCHANGED)도 세지만 changes 목록에는 바뀐 것만.
+     * totalChanges 는 limit 으로 자르기 전 바뀐 종목 수다(화면의 "전체 보기" 버튼)
+     */
     public record ChangesView(InstitutionView institution, LocalDate period, LocalDate previousPeriod,
-                              Map<HoldingDiff.Kind, Long> counts, List<HoldingDiff.Change> changes) {
+                              Map<HoldingDiff.Kind, Long> counts, List<HoldingDiff.Change> changes, int totalChanges) {
+
+        ChangesView limited(int limit) {
+            if (limit <= 0 || limit >= changes.size()) {
+                return this;
+            }
+            return new ChangesView(institution, period, previousPeriod, counts, changes.subList(0, limit), totalChanges);
+        }
     }
 
     /** 기관 하나와의 겹침 요약. topShared 는 겹침이 큰 순서의 티커 셋 */
@@ -399,7 +453,15 @@ public class InstitutionPortfolioService {
 
     /** 한 분기 보유 전체 */
     public record HoldingsView(InstitutionView institution, LocalDate period, LocalDate filedDate,
-                               long totalValueUsd, List<Row> holdings) {
+                               long totalValueUsd, List<Row> holdings, int totalRows) {
+
+        /** 금액 큰 순으로 위 limit 줄만. totalRows 는 그대로 둔다(화면이 "전체 N줄 보기" 를 띄운다) */
+        HoldingsView limited(int limit) {
+            if (limit <= 0 || limit >= holdings.size()) {
+                return this;
+            }
+            return new HoldingsView(institution, period, filedDate, totalValueUsd, holdings.subList(0, limit), totalRows);
+        }
 
         /** ticker 가 null 이면 아직 못 찾았거나 원래 없는 증권(채권·워런트). putCall 이 null 이면 주식 */
         public record Row(String cusip, String ticker, String issuerName, String titleOfClass, String putCall,

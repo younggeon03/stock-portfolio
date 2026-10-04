@@ -27,7 +27,8 @@
     const featured = list.find(i => i.cik === FEATURED_CIK && i.latestPeriod) || list.find(i => i.latestPeriod);
     // 세 덩어리는 서로 기다릴 이유가 없다. 하나가 실패해도 나머지는 그린다
     const [holdings, changes, consensus] = await Promise.all([
-        featured ? getJson(`/api/institutions/${featured.cik}/holdings`).catch(() => null) : null,
+        // 그림은 위 6종목만 쓴다. 큰 기관이면 수천 줄이라 20줄만 받는다(총 줄 수는 totalRows 로 온다)
+        featured ? getJson(`/api/institutions/${featured.cik}/holdings?limit=20`).catch(() => null) : null,
         featured ? getJson(`/api/institutions/${featured.cik}/changes`).catch(() => null) : null,
         getJson("/api/institutions/consensus?limit=5").catch(e => e)
     ]);
@@ -51,7 +52,7 @@
     // ── 대표 기관 비중 트리맵 (그리기는 site.js) ──
     function renderTreemap(h) {
         if (!h || !h.holdings) return;
-        if (!drawTreemap(document.getElementById("treemap"), h.holdings, h.institution.nameKo)) return;
+        if (!drawTreemap(document.getElementById("treemap"), h.holdings, h.institution.nameKo, h.totalRows)) return;
         document.getElementById("featuredCaption").innerHTML =
             `<a href="/public/institution.html?cik=${h.institution.cik}">${esc(h.institution.nameKo)}</a> · 비중 · ${quarter(h.period)}`;
         document.getElementById("featured").hidden = false;

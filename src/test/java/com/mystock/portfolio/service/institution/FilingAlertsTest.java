@@ -20,7 +20,7 @@ class FilingAlertsTest {
         InstitutionPortfolioService.ChangesView changes = new InstitutionPortfolioService.ChangesView(
                 null, Q2, LocalDate.of(2026, 3, 31), Map.of(),
                 List.of(change(HoldingDiff.Kind.ADDED, "GOOGL", "45.24"), change(HoldingDiff.Kind.NEW, "LLY", null),
-                        change(HoldingDiff.Kind.REDUCED, "KR", "-22.00"), change(HoldingDiff.Kind.SOLD_OUT, "HPQ", null)));
+                        change(HoldingDiff.Kind.REDUCED, "KR", "-22.00"), change(HoldingDiff.Kind.SOLD_OUT, "HPQ", null)), 4);
 
         String text = FilingAlerts.body("버크셔 해서웨이", changes, Q2, FILED, 1067983, "https://example.com/");
 
@@ -38,7 +38,7 @@ class FilingAlertsTest {
         List<HoldingDiff.Change> many = List.of("A", "B", "C", "D", "E").stream()
                 .map(t -> change(HoldingDiff.Kind.ADDED, t, "10")).toList();
         String text = FilingAlerts.body("기관", new InstitutionPortfolioService.ChangesView(null, Q2, Q2.minusMonths(3),
-                Map.of(), many), Q2, FILED, 1, "http://localhost:8080");
+                Map.of(), many, many.size()), Q2, FILED, 1, "http://localhost:8080");
 
         assertThat(text).contains("늘림: A +10%, B +10%, C +10% 외 2");
     }

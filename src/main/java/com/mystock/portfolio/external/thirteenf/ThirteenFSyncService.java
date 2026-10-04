@@ -144,6 +144,8 @@ public class ThirteenFSyncService {
             running.set(false);
             log.info("13F 배치 끝: 새 제출 {}건, 보유 {}줄, 티커 {}개 찾음, 남은 CUSIP {}개, 실패 {}건",
                     counts[0], counts[1], resolved[0], left, errors.size());
+            // 13F 조회 캐시를 비우게 한다. 중간에 실패했어도 일부는 저장됐을 수 있어 항상 낸다
+            events.publishEvent(new ThirteenFDataChangedEvent(counts[0], resolved[0]));
         }
     }
 
