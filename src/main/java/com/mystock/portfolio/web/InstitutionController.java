@@ -44,8 +44,10 @@ public class InstitutionController {
     @GetMapping("/{cik}/holdings")
     public ResponseEntity<InstitutionPortfolioService.HoldingsView> holdings(
             @PathVariable long cik,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate period) {
-        return portfolioService.holdings(cik, period)
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate period,
+            // 0 이면 전부. 피델리티는 5천 줄(약 0.9MB)이라 화면은 먼저 100줄만 받는다(부하 테스트에서 찾음)
+            @RequestParam(defaultValue = "0") int limit) {
+        return portfolioService.holdings(cik, period, limit)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -57,8 +59,9 @@ public class InstitutionController {
     @GetMapping("/{cik}/changes")
     public ResponseEntity<InstitutionPortfolioService.ChangesView> changes(
             @PathVariable long cik,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate period) {
-        return portfolioService.changes(cik, period)
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate period,
+            @RequestParam(defaultValue = "0") int limit) {
+        return portfolioService.changes(cik, period, limit)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

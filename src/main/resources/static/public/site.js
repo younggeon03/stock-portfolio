@@ -88,13 +88,14 @@ function weightBar(weight) {
  * rows 는 /holdings 의 holdings 배열. 위 여섯 종목과 "그 외" 한 칸으로 그린다.
  * 칸 위치는 % 로 넣는다. 화면 폭이 바뀌어도 다시 그릴 필요가 없다(좁은 화면 대응은 CSS 로만. CLAUDE.md).
  */
-function drawTreemap(box, rows, name) {
+/** totalRows: rows 가 위 몇 줄로 잘려 왔을 때 전체 줄 수("그 외 N" 을 맞게 세려고). 없으면 rows 길이 */
+function drawTreemap(box, rows, name, totalRows) {
     const stocks = rows.filter(r => !r.putCall && Number(r.weightPercent) > 0);
     const top = stocks.slice(0, 6);
     if (top.length === 0) return false;
     const shown = top.reduce((s, r) => s + Number(r.weightPercent), 0);
     const items = top.map((r, i) => ({ label: r.ticker || r.issuerName, pct: Number(r.weightPercent), cls: "t" + (i + 1) }));
-    const restCount = rows.length - top.length;
+    const restCount = (totalRows || rows.length) - top.length;
     if (restCount > 0 && 100 - shown > 0.5) items.push({ label: `그 외 ${restCount}`, pct: 100 - shown, cls: "t6", rest: true });
 
     // 실제 그림 비율(약 1.8:1)로 계산해야 칸이 정사각형에 가깝게 나온다
