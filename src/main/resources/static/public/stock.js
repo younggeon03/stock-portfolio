@@ -311,29 +311,45 @@
     }
 
     function paintAi(box, ticker, data, owner) {
-        const run = (label, refresh) => !owner ? "" :
-            `<p class="ai-actions"><button type="button" class="primary ai-run" data-refresh="${refresh}">${label}</button>
+        const run = (label, mode) => !owner ? "" :
+            `<p class="ai-actions"><button type="button" class="primary ai-run" data-mode="${mode}">${label}</button>
              <span class="muted">1회 800~1,600원 · 2~5분</span></p>`;
+        // 조사가 보관 일수 안이면 싼 "판단만 새로" 를 앞에 둔다. 저장된 조사는 그대로, 판정·내 위치·위험만 다시 쓴다
+        const rerun = d => !owner ? "" : (d.analysis && !d.stale
+            ? `<p class="ai-actions"><button type="button" class="primary ai-run" data-mode="reassess">판단만 새로</button>
+               <span class="muted">검색 없이 · 약 100~300원 · 1분 안팎</span>
+               <button type="button" class="ai-run" data-mode="refresh">전체 다시 분석</button>
+               <span class="muted">800~1,600원 · 2~5분</span></p>`
+            : run("다시 분석", "refresh"));
         if (!data || data.status === "NONE") {
             box.innerHTML = (owner
                 ? '<p class="muted">아직 분석하지 않았습니다. 가진 종목이면 평단가 기준으로, 안 가진 종목이면 평단가 없이 현재가만으로 분석합니다.</p>'
-                : '<p class="muted">아직 AI 기업분석이 없습니다. 아래는 공시와 13F 로 본 사실입니다.</p>') + run("AI 기업분석 실행", false);
+                : '<p class="muted">아직 AI 기업분석이 없습니다. 아래는 공시와 13F 로 본 사실입니다.</p>') + run("AI 기업분석 실행", "new");
         } else if (data.status === "RUNNING") {
-            box.innerHTML = '<p class="loading">클로드가 웹 검색으로 조사하고 있습니다. 보통 2~5분 걸립니다. 닫아도 계속됩니다.</p>';
+            box.innerHTML = box.dataset.kind === "reassess"
+                ? '<p class="loading">저장된 조사로 판단만 새로 쓰고 있습니다. 웹 검색이 없어 보통 1분 안에 끝납니다.</p>'
+                : '<p class="loading">클로드가 웹 검색으로 조사하고 있습니다. 보통 2~5분 걸립니다. 닫아도 계속됩니다.</p>';
             // 끝날 때까지 8초마다 다시 묻는다. 창을 닫거나 다른 종목을 열면(칸이 사라지면) 멈춘다
             setTimeout(() => { if (document.contains(box)) loadAi(box.parentElement, ticker); }, 8000);
         } else {
             const c = analysisContentHtml(data);
-            box.innerHTML = (c.meta ? `<p class="ai-meta">${esc(c.meta)}</p>` : "") + run("다시 분석", true) + c.html;
+            box.innerHTML = (c.meta ? `<p class="ai-meta">${esc(c.meta)}</p>` : "") + rerun(data) + c.html;
             bindPeriodToggles(box);
+            delete box.dataset.kind;
         }
-        const btn = box.querySelector(".ai-run");
-        if (btn) btn.addEventListener("click", () => runAi(box, ticker, btn.dataset.refresh === "true"));
+        box.querySelectorAll(".ai-run").forEach(btn =>
+            btn.addEventListener("click", () => runAi(box, ticker, btn.dataset.mode)));
     }
 
-    /** 돈이 드는 호출. 나에게만 버튼이 보이고, 서버도 로그인 없이는 막는다(401) */
-    async function runAi(box, ticker, refresh) {
+    /**
+     * 돈이 드는 호출. 나에게만 버튼이 보이고, 서버도 로그인 없이는 막는다(401)
+     *
+     * @param mode "new" 첫 분석, "refresh" 전체 다시 분석, "reassess" 판단만 새로
+     */
+    async function runAi(box, ticker, mode) {
         box.innerHTML = '<p class="loading">분석을 시작합니다…</p>';
+        // RUNNING 응답은 어느 쪽인지 말해주지 않아 칸에 적어 둔다(진행 문구용)
+        box.dataset.kind = mode === "reassess" ? "reassess" : "full";
         const headers = { "Accept": "application/json" };
         const token = readCookie("XSRF-TOKEN");   // POST 는 CSRF 토큰이 있어야 한다
         if (token) headers["X-XSRF-TOKEN"] = token;
@@ -343,8 +359,9 @@
             if (key) headers["X-Owner-Key"] = key;
         } catch (e) { /* 저장소를 못 쓰는 브라우저. 증권사 보유만으로 판단한다 */ }
         try {
-            const res = await fetch("/api/analysis/" + encodeURIComponent(ticker) + (refresh ? "?refresh=true" : ""),
-                { method: "POST", headers });
+            const base = "/api/analysis/" + encodeURIComponent(ticker);
+            const url = mode === "reassess" ? base + "/reassess" : base + (mode === "refresh" ? "?refresh=true" : "");
+            const res = await fetch(url, { method: "POST", headers });
             const data = await res.json().catch(() => null);
             if (!res.ok) {
                 box.innerHTML = `<p class="error">${esc((data && (data.error || data.message)) || "분석을 시작하지 못했습니다 (" + res.status + ")")}</p>`;

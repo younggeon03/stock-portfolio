@@ -22,6 +22,7 @@
 | 주소 | 비용 |
 |---|---|
 | `POST /api/analysis/{symbol}` | 1회 800~1,600원 (웹검색이 길어지면 더). 안 가진 종목도 됨(현재가만) |
+| `POST /api/analysis/{symbol}/reassess` | 판단만 새로. 검색 없이 약 100~300원(추정). 조사가 7일 안일 때만 |
 | `POST /api/import/screenshot` | 1장 약 60원. 보내기 전에 긴 변 2,000px 로 줄입니다 |
 | `POST /api/news/brief` | 종목당 하루 한 번, 약 5원(하쿠). 실패해도 목록은 나감 |
 
@@ -41,7 +42,7 @@ java -jar target/portfolio-0.0.1-SNAPSHOT.jar
 - **`mvnw spring-boot:run` 은 실패합니다.** 경로에 한글(`주식`)이 있어 클래스패스가 깨집니다. 반드시 jar 로 실행하세요.
 - 빌드 중 `Unable to rename ... .jar` 가 나오면 앱이 아직 떠 있는 것입니다. 먼저 java 프로세스를 죽이세요.
 - **정적 파일도 jar 안에서 나옵니다.** css/js 만 고쳐도 다시 빌드하고 재시작해야 화면에 반영됩니다.
-- 테스트: `./mvnw.cmd test` — 158개. 외부 API·DB 를 부르지 않아 키 없이 돕니다. **CI 도 이 전제에 기대고 있습니다.** 키나 DB 가 필요한 테스트를 넣으면 GitHub Actions 가 깨집니다.
+- 테스트: `./mvnw.cmd test` — 199개. 외부 API·DB 를 부르지 않아 키 없이 돕니다. **CI 도 이 전제에 기대고 있습니다.** 키나 DB 가 필요한 테스트를 넣으면 GitHub Actions 가 깨집니다.
 - 도커: `docker compose up -d --build` 로 앱과 MySQL 을 같이 띄웁니다. 자세한 건 [운영](docs/운영.md).
 - **서버 배포는 `deploy/`** (compose·Caddy·`deploy.sh`·백업). `main` 에 합치면 자동 배포되니 **PR 을 합치는 게 곧 운영 반영**입니다. 스키마는 더하기만 하세요(되돌리면 옛 코드가 새 스키마를 만납니다). [운영 7장](docs/운영.md#7-배포)
 - **서버 `.env` 에 같은 줄 주석을 두지 마세요.** 값이 비면(`KEY=   # 설명`) compose 가 `# 설명` 을 값으로 읽습니다. 설명은 윗줄에.

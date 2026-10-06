@@ -191,6 +191,74 @@ public class CompanyAnalysisService {
                 .orElseGet(() -> CompanyAnalysisResponse.none(symbol));
     }
 
+    /**
+     * 판단만 새로 쓴다. 저장된 조사 섹션은 그대로 두고 판정·요약·내 위치·위험만 웹 검색 없이 다시 쓴다.
+     *
+     * 조사가 보관 일수(anthropic.cache-days)를 넘겼으면 받지 않는다. 낡은 컨센서스 위에 새 판정을 얹으면
+     * 날짜만 새것인 판단이 된다. 그때는 전체 다시 분석을 써야 한다.
+     */
+    public CompanyAnalysisResponse reassess(String symbol, String ownerKey) {
+        CompanyAnalysis entity = store.find(symbol)
+                .filter(CompanyAnalysis::hasAnalysis)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "저장된 분석이 없습니다. 먼저 전체 분석을 하세요."));
+
+        if (CompanyAnalysis.STATUS_RUNNING.equals(entity.getStatus())
+                && entity.getUpdatedAt().isAfter(LocalDateTime.now().minus(STALE_RUNNING))) {
+            return toResponse(entity);
+        }
+
+        CompanyAnalysisResponse current = toResponse(entity);
+        if (current.analysis() == null) {
+            throw new IllegalArgumentException("저장된 분석을 읽지 못했습니다. 전체 다시 분석을 하세요.");
+        }
+        if (current.stale()) {
+            throw new IllegalArgumentException("조사한 지 " + current.ageDays()
+                    + "일이 지나 판단만 새로 쓸 수 없습니다. 전체 다시 분석을 하세요.");
+        }
+
+        CompanyAnalysisFacts facts = collectFacts(symbol, ownerKey);
+        // 옛 조사 섹션에도 평단가 이야기가 들어 있을 수 있다(수치 지표 본문의 "평단가는 몇 배"). 한 번 비공개였으면 계속 비공개
+        boolean includesPosition = facts.held() || entity.isIncludesPosition();
+
+        store.beginRun(symbol, facts.name());
+        LocalDateTime researchedAt = entity.getResearchedAt();
+        worker.submit(() -> runReassessment(facts, current.analysis(), researchedAt, includesPosition));
+
+        return store.find(symbol).map(this::toResponse)
+                .orElseGet(() -> CompanyAnalysisResponse.none(symbol));
+    }
+
+    /** 백그라운드에서 판단만 새로 쓰는 부분 */
+    private void runReassessment(CompanyAnalysisFacts facts, CompanyAnalysisView stored,
+                                 LocalDateTime researchedAt, boolean includesPosition) {
+        String symbol = facts.symbol();
+        try {
+            log.info("{} 판단만 새로 시작 (조사 {})", symbol, researchedAt);
+            ResearchHints hints = hintsCollector.collect(facts);
+            ClaudeCallResult result = claudeClient.reassess(
+                    promptBuilder.reassessSystemPrompt(),
+                    promptBuilder.reassessUserPrompt(facts, hints, stored, researchedAt));
+
+            String json = mergeReassessment(stored, result.analysisJson());
+            store.saveReassessment(symbol, result.withAnalysisJson(json), includesPosition);
+            log.info("{} 판단만 새로 저장 완료", symbol);
+        } catch (Exception e) {
+            log.warn("{} 판단만 새로 실패: {}", symbol, e.getMessage());
+            store.saveFailure(symbol, e.getMessage());
+        }
+    }
+
+    /** 제출된 판단을 저장된 분석에 덮어 저장할 JSON 으로 만든다. 깨진 JSON 이면 예외(옛 분석은 그대로 남는다) */
+    String mergeReassessment(CompanyAnalysisView stored, String reassessmentJson) {
+        try {
+            Reassessment r = objectMapper.readValue(reassessmentJson, Reassessment.class);
+            return objectMapper.writeValueAsString(r.mergeInto(stored));
+        } catch (Exception e) {
+            throw new AppException("판단 결과 JSON 을 읽지 못했습니다: " + e.getMessage(), e);
+        }
+    }
+
     /** 백그라운드에서 실제로 클로드를 부르는 부분 */
     private void runAnalysis(CompanyAnalysisFacts facts) {
         String symbol = facts.symbol();
@@ -415,8 +483,9 @@ public class CompanyAnalysisService {
 
         Integer ageDays = null;
         boolean stale = false;
-        if (entity.getAnalyzedAt() != null) {
-            ageDays = (int) Duration.between(entity.getAnalyzedAt(), LocalDateTime.now()).toDays();
+        // 오래됨은 판정이 아니라 조사 기준이다. 판단만 새로 써도 그 밑의 웹 조사는 그대로 늙는다
+        if (entity.getResearchedAt() != null) {
+            ageDays = (int) Duration.between(entity.getResearchedAt(), LocalDateTime.now()).toDays();
             stale = ageDays >= anthropicProperties.cacheDays();
         }
 
@@ -424,6 +493,7 @@ public class CompanyAnalysisService {
                 entity.getSymbol(),
                 entity.getStatus(),
                 entity.getAnalyzedAt(),
+                entity.getResearchedAt(),
                 stale,
                 ageDays,
                 entity.getLastError(),
@@ -449,7 +519,7 @@ public class CompanyAnalysisService {
                 .map(this::toResponse)
                 .filter(r -> r.analysis() != null)
                 .map(r -> new CompanyAnalysisResponse(r.symbol(), CompanyAnalysis.STATUS_OK, r.analyzedAt(),
-                        r.stale(), r.ageDays(), null, r.disclaimer(), r.model(), null, null,
+                        r.researchedAt(), r.stale(), r.ageDays(), null, r.disclaimer(), r.model(), null, null,
                         r.webSearchCount(), false, r.analysis()))
                 .orElseGet(() -> CompanyAnalysisResponse.none(symbol));
     }

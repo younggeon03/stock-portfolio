@@ -76,4 +76,15 @@ public class CompanyAnalysisController {
                                          @RequestHeader(value = "X-Owner-Key", required = false) String ownerKey) {
         return analysisService.start(symbol.trim().toUpperCase(), refresh, ownerKey);
     }
+
+    /**
+     * 판단만 새로 쓴다. 저장된 조사(섹션)는 그대로 두고 판정·요약·내 위치·위험만 웹검색 없이 다시 쓴다.
+     * 조사가 보관 일수를 넘겼으면 400 이다. 그때는 위의 refresh=true 로 전체를 다시 분석한다.
+     * 돈이 나간다(전체 분석보다 훨씬 적게). 시작과 상태 확인 방식은 위와 같다
+     */
+    @PostMapping("/{symbol}/reassess")
+    public CompanyAnalysisResponse reassess(@PathVariable String symbol,
+                                            @RequestHeader(value = "X-Owner-Key", required = false) String ownerKey) {
+        return analysisService.reassess(symbol.trim().toUpperCase(), ownerKey);
+    }
 }
