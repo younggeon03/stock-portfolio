@@ -224,10 +224,10 @@ public class CompanyAnalysisPromptBuilder {
             sb.append("순이익은 비지배지분을 포함한 연결 당기순이익이다. 지배주주 순이익과 차이가 크면 그 점을 밝혀라.\n");
         }
 
-        sb.append("출처로 쓸 공시 원문 (sources 에 그대로 넣어라):\n");
-        for (CompanyFinancials.Source source : d.sources()) {
-            sb.append("- ").append(source.title()).append(": ").append(source.url()).append('\n');
-        }
+        // 공시 원문 주소는 넣지 않는다. 표와 출처는 앱이 분석 결과에 직접 붙이므로(FinancialMetrics)
+        // 모델이 주소를 받아 sources 에 옮겨 적으면 입력·출력 토큰만 든다
+        sb.append("★ 이 표와 공시 원문 출처는 앱이 FINANCIAL_POSITION·VALUATION_METRICS 에 직접 붙인다. ")
+                .append("metrics·sources 에 다시 옮겨 적지 말고 body 에서 해석만 해라.\n");
         if (d.history() != null && !d.history().isEmpty()) {
             sb.append("\n[과거 배수] ★ 결산일 종가(토스) ÷ 그 해 공시 EPS·BPS. 이 회사가 받아온 배수 범위다.\n");
             sb.append("| 기간 | 종가 기준일 | 종가 | PER | PBR |\n");

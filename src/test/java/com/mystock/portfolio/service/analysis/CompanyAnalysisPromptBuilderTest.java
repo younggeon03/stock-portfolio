@@ -83,7 +83,9 @@ class CompanyAnalysisPromptBuilderTest {
         assertThat(prompt).contains("[공시 재무]");
         assertThat(prompt).contains("3,336,059");      // 매출 억원
         assertThat(prompt).contains("PER 13.09배");
-        assertThat(prompt).contains("rcpNo=20260310000001");
+        // 공시 원문 주소와 표는 앱이 결과에 직접 붙인다. 모델에게는 옮겨 적지 말라고만 한다
+        assertThat(prompt).doesNotContain("rcpNo=20260310000001");
+        assertThat(prompt).contains("metrics·sources 에 다시 옮겨 적지 말고");
         // 우선주를 넣었는지에 따라 PER 이 20% 넘게 달라진다. 무엇으로 나눴는지 모델도 알아야 한다
         assertThat(prompt).contains("보통주+우선주 유통주식수");
         // 과거 배수가 있으면 표로 넣고, 웹에서 PER 범위를 찾지 말라고 한다 (53,000 ÷ 7,637 = 6.94배)
@@ -122,7 +124,7 @@ class CompanyAnalysisPromptBuilderTest {
         assertThat(prompt).contains("| 63,887 |");   // 매출 백만 달러
         assertThat(prompt).contains("| 4.84 |");       // EPS 달러 (23,126M / 4,773M주)
         assertThat(prompt).contains("현재가 $363.50 기준");
-        assertThat(prompt).contains("000173016825000121");
+        assertThat(prompt).doesNotContain("000173016825000121");
         // 한국 연결 순이익 경고는 미국 종목에 붙지 않는다
         assertThat(prompt).doesNotContain("비지배지분을 포함한 연결 당기순이익");
         assertThat(prompt).containsPattern("재무제표[^\\n]* 는 아래 자료에 있으니 검색하지 마라");

@@ -205,10 +205,14 @@ public class CompanyAnalysisService {
                     promptBuilder.userPrompt(facts, hints));
 
             // 저장하기 전에 파싱이 되는지 확인한다. 깨진 JSON 을 저장해두면 화면이 못 읽는다.
-            parseAndNormalize(result.analysisJson(), symbol);
+            CompanyAnalysisView view = parseAndNormalize(result.analysisJson(), symbol);
+
+            // 재무 표는 모델이 아니라 앱이 공시 재무로 채운다(FinancialMetrics 주석).
+            // 저장할 때 끼워 두면 그 분석을 만든 시점의 숫자가 같이 남고, 공개 화면도 따로 할 일이 없다
+            String json = objectMapper.writeValueAsString(FinancialMetrics.inject(view, facts.financials()));
 
             // 평단가가 들어간 분석인지 같이 남긴다. 공개 화면은 들어가지 않은 것만 보여준다
-            store.saveSuccess(symbol, result, facts.held());
+            store.saveSuccess(symbol, result.withAnalysisJson(json), facts.held());
             log.info("{} 기업분석 저장 완료", symbol);
 
         } catch (Exception e) {
