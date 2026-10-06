@@ -100,7 +100,13 @@ function analysisContentHtml(data) {
     if (!a) return { html: html + '<div class="state">표시할 분석이 없습니다.</div>', meta: null };
 
     const meta = [];
-    if (data.analyzedAt) meta.push(data.analyzedAt.replace("T", " ").substring(0, 16));
+    // "판단만 새로" 를 했으면 판정과 그 밑의 조사가 다른 날짜다. 조사가 언제 것인지 숨기면 판정이 실제보다 새로워 보인다
+    const when = t => t.replace("T", " ").substring(0, 16);
+    if (data.analyzedAt && data.researchedAt && when(data.researchedAt) !== when(data.analyzedAt)) {
+        meta.push("판단 갱신 " + when(data.analyzedAt), "조사 " + when(data.researchedAt));
+    } else if (data.analyzedAt) {
+        meta.push(when(data.analyzedAt));
+    }
     if (data.model) meta.push(data.model);
     if (a.instrumentType) meta.push(a.instrumentType === "ETF" ? "ETF·펀드형" : "개별 기업");
     if (data.webSearchCount) meta.push("웹검색 " + data.webSearchCount + "회");

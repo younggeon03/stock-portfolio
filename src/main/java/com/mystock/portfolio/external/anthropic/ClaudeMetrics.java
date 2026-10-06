@@ -19,7 +19,7 @@ import java.util.function.Supplier;
  * 토큰을 종류별(제값·캐시쓰기·캐시읽기·출력)로 세어 두면 Grafana 에서 하루·한 달 사용량과
  * "캐시 읽기가 0 인가(캐싱이 죽었나)" 를 바로 본다(CLAUDE.md 의 그 확인을 지표로).
  *
- * 태그: kind = analysis|screenshot|news, model, outcome = success|error. 종목은 태그로 달지 않는다(시계열이 불어남).
+ * 태그: kind = analysis|reassess|screenshot|news, model, outcome = success|error. 종목은 태그로 달지 않는다(시계열이 불어남).
  */
 @Component
 public class ClaudeMetrics {

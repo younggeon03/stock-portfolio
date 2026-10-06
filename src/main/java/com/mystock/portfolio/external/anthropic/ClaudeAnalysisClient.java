@@ -28,8 +28,34 @@ public class ClaudeAnalysisClient {
 
     private static final Logger log = LoggerFactory.getLogger(ClaudeAnalysisClient.class);
 
-    /** 분석 결과를 제출받을 도구 이름 */
-    private static final String SUBMIT_TOOL = "submit_analysis";
+    /**
+     * 부르는 방식 두 가지.
+     *
+     * ★ 판단만 새로(REASSESS)는 웹검색 도구를 아예 선언하지 않는다
+     * 이미 저장된 조사 섹션을 사실로 받아 판정·내 위치·위험만 다시 쓴다. 검색 결과가 대화에 쌓이지 않으니
+     * 한 번 부르고 끝나고, 전체 분석의 몇 분의 일 값이다. 조사 자체가 낡았으면(보관 일수 초과) 쓰지 않는다.
+     */
+    private enum Mode {
+        RESEARCH("submit_analysis", "완성된 기업분석 결과를 제출한다. 반드시 정확히 한 번만 호출한다.",
+                "prompts/company-analysis-schema.json", true, "analysis"),
+        REASSESS("submit_reassessment", "새로 쓴 판정·요약·내 위치·위험을 제출한다. 반드시 정확히 한 번만 호출한다.",
+                "prompts/company-reassess-schema.json", false, "reassess");
+
+        final String tool;
+        final String description;
+        final String schema;
+        final boolean webSearch;
+        /** 지표(claude.requests)의 kind 태그 */
+        final String kind;
+
+        Mode(String tool, String description, String schema, boolean webSearch, String kind) {
+            this.tool = tool;
+            this.description = description;
+            this.schema = schema;
+            this.webSearch = webSearch;
+            this.kind = kind;
+        }
+    }
 
     /** 웹검색이 길어져 턴이 끊길 때 이어서 호출할 최대 횟수 */
     private static final int MAX_CONTINUE = 6;
@@ -38,8 +64,8 @@ public class ClaudeAnalysisClient {
     private final AnthropicProperties properties;
     private final ObjectMapper objectMapper;
 
-    /** 도구 스키마는 한 번만 읽어서 재사용한다 */
-    private volatile ToolUnion submitTool;
+    /** 도구 스키마는 방식마다 한 번만 읽어서 재사용한다 */
+    private final java.util.Map<Mode, ToolUnion> submitTools = new java.util.concurrent.ConcurrentHashMap<>();
 
     private final ClaudeMetrics metrics;
 
@@ -60,9 +86,23 @@ public class ClaudeAnalysisClient {
      * @param userPrompt   종목별 확정 정보와 요청 (매번 다름)
      */
     public ClaudeCallResult analyze(String systemPrompt, String userPrompt) {
+        return run(Mode.RESEARCH, systemPrompt, userPrompt);
+    }
+
+    /**
+     * 판단만 새로 쓴다. 웹검색 없이 한 번 부른다.
+     *
+     * @param systemPrompt 판정 규칙만 담은 짧은 지시문
+     * @param userPrompt   저장된 조사 섹션 + 지금 시세·보유 현황
+     */
+    public ClaudeCallResult reassess(String systemPrompt, String userPrompt) {
+        return run(Mode.REASSESS, systemPrompt, userPrompt);
+    }
+
+    private ClaudeCallResult run(Mode mode, String systemPrompt, String userPrompt) {
         long startedAt = System.currentTimeMillis();
 
-        Message message = call(baseParams(systemPrompt, userPrompt).build());
+        Message message = call(mode, baseParams(mode, systemPrompt, userPrompt).build());
 
         int inputTokens = 0;
         int cacheWriteTokens = 0;
@@ -80,16 +120,16 @@ public class ClaudeAnalysisClient {
             outputTokens += (int) message.usage().outputTokens();
             webSearchCount += countWebSearches(message);
 
-            String submitted = findSubmittedAnalysis(message);
+            String submitted = findSubmitted(mode, message);
             if (submitted != null) {
                 long elapsed = (System.currentTimeMillis() - startedAt) / 1000;
                 ClaudeCallResult result = new ClaudeCallResult(submitted, properties.model(),
                         inputTokens, cacheWriteTokens, cacheReadTokens,
                         outputTokens, webSearchCount, elapsed);
                 // 캐시 읽기가 0 이면 캐싱이 죽은 것이다. 에러가 안 나고 요금만 올라가므로 매번 찍어서 본다.
-                log.info("기업분석 완료 - 프롬프트 {}토큰(제값 {} / 캐시쓰기 {} / 캐시읽기 {}) "
+                log.info("기업분석({}) 완료 - 프롬프트 {}토큰(제값 {} / 캐시쓰기 {} / 캐시읽기 {}) "
                                 + "/ 출력 {}토큰 / 웹검색 {}회 / 소요 {}초 / 약 ${}",
-                        result.totalPromptTokens(), inputTokens, cacheWriteTokens, cacheReadTokens,
+                        mode.kind, result.totalPromptTokens(), inputTokens, cacheWriteTokens, cacheReadTokens,
                         outputTokens, webSearchCount, elapsed,
                         String.format("%.3f", result.estimatedUsd()));
                 return result;
@@ -105,17 +145,17 @@ public class ClaudeAnalysisClient {
 
             log.info("웹검색이 길어져 이어서 호출합니다 ({}회차)", continued);
             // 직전 응답을 그대로 대화에 붙이고 다시 부른다. 그래야 이미 검색한 내용을 다시 찾지 않는다.
-            message = call(baseParams(systemPrompt, userPrompt)
+            message = call(mode, baseParams(mode, systemPrompt, userPrompt)
                     .addMessage(message)
                     .build());
         }
     }
 
     /** 실제 호출 + 에러 번역 */
-    private Message call(MessageCreateParams params) {
+    private Message call(Mode mode, MessageCreateParams params) {
         try {
             // 웹검색으로 이어 부르는 회차마다 한 번씩 센다(토큰도 회차마다 나간다)
-            return metrics.record("analysis", properties.model(), () -> provider.client().messages().create(params));
+            return metrics.record(mode.kind, properties.model(), () -> provider.client().messages().create(params));
         } catch (AppException e) {
             throw e;
         } catch (Exception e) {
@@ -145,8 +185,8 @@ public class ClaudeAnalysisClient {
      *
      * 사고·노력 설정을 호출마다 바꾸면 뒷부분 캐시가 통째로 날아간다. 그래서 둘 다 고정해 둔다.
      */
-    private MessageCreateParams.Builder baseParams(String systemPrompt, String userPrompt) {
-        return MessageCreateParams.builder()
+    private MessageCreateParams.Builder baseParams(Mode mode, String systemPrompt, String userPrompt) {
+        MessageCreateParams.Builder builder = MessageCreateParams.builder()
                 .model(properties.model())
                 .maxTokens(properties.maxTokens())
                 // 적응형 사고. budget_tokens 는 이 모델에서 제거되어 쓰면 400 이 난다.
@@ -163,32 +203,27 @@ public class ClaudeAnalysisClient {
                         .cacheControl(CacheControlEphemeral.builder()
                                 .ttl(CacheControlEphemeral.Ttl.TTL_1H)
                                 .build())
-                        .build()))
-                // 웹검색은 Anthropic 서버에서 돌아간다. 코드실행 도구는 같이 선언하지 않는다.
-                .addTool(WebSearchTool20260209.builder()
-                        .maxUses(properties.webSearchMaxUses().longValue())
-                        .build())
-                .addTool(submitTool())
+                        .build()));
+        if (mode.webSearch) {
+            // 웹검색은 Anthropic 서버에서 돌아간다. 코드실행 도구는 같이 선언하지 않는다.
+            builder.addTool(WebSearchTool20260209.builder()
+                    .maxUses(properties.webSearchMaxUses().longValue())
+                    .build());
+        }
+        return builder
+                .addTool(submitTool(mode))
                 .addUserMessage(userPrompt);
     }
 
-    private ToolUnion submitTool() {
-        if (submitTool == null) {
-            synchronized (this) {
-                if (submitTool == null) {
-                    submitTool = provider.strictTool(SUBMIT_TOOL,
-                            "완성된 기업분석 결과를 제출한다. 반드시 정확히 한 번만 호출한다.",
-                            "prompts/company-analysis-schema.json");
-                }
-            }
-        }
-        return submitTool;
+    private ToolUnion submitTool(Mode mode) {
+        return submitTools.computeIfAbsent(mode,
+                m -> provider.strictTool(m.tool, m.description, m.schema));
     }
 
-    /** 응답에서 submit_analysis 도구 호출을 찾아 JSON 문자열로 꺼낸다. 없으면 null */
-    private String findSubmittedAnalysis(Message message) {
+    /** 응답에서 제출 도구 호출을 찾아 JSON 문자열로 꺼낸다. 없으면 null */
+    private String findSubmitted(Mode mode, Message message) {
         for (ContentBlock block : message.content()) {
-            if (block.isToolUse() && SUBMIT_TOOL.equals(block.asToolUse().name())) {
+            if (block.isToolUse() && mode.tool.equals(block.asToolUse().name())) {
                 try {
                     return objectMapper.writeValueAsString(block.asToolUse()._input());
                 } catch (Exception e) {

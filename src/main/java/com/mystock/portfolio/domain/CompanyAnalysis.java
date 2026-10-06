@@ -68,6 +68,13 @@ public class CompanyAnalysis {
     @Column(name = "analyzed_at")
     private LocalDateTime analyzedAt;
 
+    /**
+     * 마지막 전체 분석(웹 조사)을 한 시각. "판단만 새로" 는 이 값을 바꾸지 않는다.
+     * analyzedAt 은 판정을 마지막으로 쓴 시각이라, 둘이 다르면 조사는 그보다 오래된 것이다
+     */
+    @Column(name = "researched_at")
+    private LocalDateTime researchedAt;
+
     /** 마지막으로 시도한 시각 (실패 포함) */
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
@@ -129,7 +136,24 @@ public class CompanyAnalysis {
         this.status = STATUS_OK;
         this.lastError = null;
         this.analyzedAt = LocalDateTime.now();
+        this.researchedAt = this.analyzedAt;
         this.updatedAt = this.analyzedAt;
+    }
+
+    /**
+     * 판단만 새로 썼다. 조사 시각(researchedAt)은 그대로 두고 나머지는 성공과 같다.
+     * 토큰 수는 이번 호출 것으로 바뀐다(마지막 호출의 비용을 보이는 칸이다)
+     */
+    public void markReassessed(String analysisJson, String model,
+                               Integer inputTokens, Integer outputTokens, boolean includesPosition) {
+        LocalDateTime researched = this.researchedAt != null ? this.researchedAt : this.analyzedAt;
+        markSuccess(analysisJson, model, inputTokens, outputTokens, 0, includesPosition);
+        this.researchedAt = researched;
+    }
+
+    /** 조사 시각. 이 칸이 생기기 전 분석은 판정 시각과 같다 */
+    public LocalDateTime getResearchedAt() {
+        return researchedAt != null ? researchedAt : analyzedAt;
     }
 
     /**

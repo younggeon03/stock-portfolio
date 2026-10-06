@@ -40,6 +40,8 @@ const briefBtn = document.getElementById("briefBtn");
 const analysisMeta = document.getElementById("analysisMeta");
 const analysisBody = document.getElementById("analysisBody");
 const analyzeBtn = document.getElementById("analyzeBtn");
+// 저장된 조사는 두고 판정·내 위치·위험만 검색 없이 다시 쓴다. 조사가 보관 일수 안일 때만 보인다
+const reassessBtn = document.getElementById("reassessBtn");
 
 /** 지금 보고 있는 범위. ALL / TOSS / NAMUH */
 let currentScope = "ALL";
@@ -823,6 +825,7 @@ async function loadAnalysis(symbol) {
     analysisMeta.textContent = "";
     analysisBody.innerHTML = '<div class="state">불러오는 중...</div>';
     analyzeBtn.style.display = "none";
+    reassessBtn.hidden = true;
 
     try {
         const res = await apiFetch("/api/analysis/" + encodeURIComponent(symbol));
@@ -845,14 +848,32 @@ async function loadAnalysis(symbol) {
     }
 }
 
-/** ★ 여기서만 돈이 나간다. 그래서 버튼을 눌러야 실행된다 */
-async function startAnalysis(symbol, refresh) {
+/** 돌고 있는 작업이 전체 분석인지 판단만 새로인지. RUNNING 응답은 둘을 구분하지 않아 화면이 기억한다 */
+let runningKind = "full";
+
+/** 진행 중 문구. 판단만 새로는 검색이 없어 훨씬 빨리 끝난다 */
+function runningText(elapsed) {
+    const time = elapsed ? ` (${elapsed}초)` : "";
+    return runningKind === "reassess"
+        ? `저장된 조사로 판단만 새로 쓰고 있습니다${time}<br>웹 검색이 없어 보통 1분 안에 끝납니다.`
+        : `클로드가 웹 검색으로 조사하고 있습니다${time}<br>보통 2~5분 걸립니다. 다른 종목을 봐도 분석은 계속됩니다.`;
+}
+
+/**
+ * ★ 여기서만 돈이 나간다. 그래서 버튼을 눌러야 실행된다
+ *
+ * @param mode "new" 첫 분석, "refresh" 전체 다시 분석, "reassess" 판단만 새로
+ */
+async function startAnalysis(symbol, mode) {
     analyzeBtn.disabled = true;
-    analyzeBtn.textContent = "시작하는 중...";
+    reassessBtn.disabled = true;
+    (mode === "reassess" ? reassessBtn : analyzeBtn).textContent = "시작하는 중...";
     analysisStartedAt = Date.now();
+    runningKind = mode === "reassess" ? "reassess" : "full";
 
     try {
-        const url = "/api/analysis/" + encodeURIComponent(symbol) + (refresh ? "?refresh=true" : "");
+        const base = "/api/analysis/" + encodeURIComponent(symbol);
+        const url = mode === "reassess" ? base + "/reassess" : base + (mode === "refresh" ? "?refresh=true" : "");
         const res = await apiFetch(url, { method: "POST" });
 
         if (!res.ok) {
@@ -871,7 +892,10 @@ async function startAnalysis(symbol, refresh) {
         analysisBody.querySelector(".state").textContent = "분석을 시작하지 못했습니다: " + e.message;
     } finally {
         analyzeBtn.disabled = false;
-        analyzeBtn.textContent = "기업분석 실행";
+        reassessBtn.disabled = false;
+        reassessBtn.textContent = "판단만 새로";
+        // 성공했으면 renderAnalysis 가 이미 알맞은 이름을 달았다. 실패했을 때만 되돌린다
+        if (analyzeBtn.textContent === "시작하는 중...") analyzeBtn.textContent = "다시 시도";
     }
 }
 
@@ -896,9 +920,7 @@ function startPolling(symbol) {
 
             const data = await res.json();
             if (data.status === "RUNNING") {
-                analysisBody.innerHTML = `<div class="state"><div class="spinner"></div>
-                    클로드가 웹 검색으로 조사하고 있습니다 (${elapsed}초)<br>
-                    보통 2~5분 걸립니다. 다른 종목을 봐도 분석은 계속됩니다.</div>`;
+                analysisBody.innerHTML = `<div class="state"><div class="spinner"></div>${runningText(elapsed)}</div>`;
             } else {
                 stopPolling();
                 renderAnalysis(data);
@@ -910,11 +932,12 @@ function startPolling(symbol) {
 
 function renderAnalysis(data) {
     analyzeBtn.style.display = "inline-block";
+    reassessBtn.hidden = true;
 
     if (data.status === "NONE") {
         analysisMeta.textContent = "아직 분석하지 않았습니다";
         analyzeBtn.textContent = "기업분석 실행";
-        analyzeBtn.onclick = () => startAnalysis(data.symbol, false);
+        analyzeBtn.onclick = () => startAnalysis(data.symbol, "new");
         analysisBody.innerHTML = '<div class="state">버튼을 누르면 클로드가 웹 검색으로 재무·지표·컨센서스·사업구조를 조사합니다.<br>'
             + '2~5분 걸리고 비용이 들기 때문에 자동으로 실행하지 않습니다.</div>';
         return;
@@ -923,12 +946,18 @@ function renderAnalysis(data) {
     if (data.status === "RUNNING") {
         analysisMeta.textContent = "분석 중";
         analyzeBtn.style.display = "none";
-        analysisBody.innerHTML = '<div class="state"><div class="spinner"></div>클로드가 웹 검색으로 조사하고 있습니다.<br>보통 2~5분 걸립니다.</div>';
+        analysisBody.innerHTML = `<div class="state"><div class="spinner"></div>${runningText(0)}</div>`;
         return;
     }
 
-    analyzeBtn.textContent = "다시 분석";
-    analyzeBtn.onclick = () => startAnalysis(data.symbol, true);
+    // 조사가 보관 일수 안이면 싼 "판단만 새로" 를 앞에 둔다. 낡았으면 전체 다시 분석만 (서버도 400 으로 막는다)
+    const canReassess = !!data.analysis && !data.stale;
+    reassessBtn.hidden = !canReassess;
+    reassessBtn.title = "저장된 조사는 그대로, 판정·내 위치·위험만 지금 가격으로 다시 씁니다. 웹 검색 없음, 약 100~300원";
+    reassessBtn.onclick = () => startAnalysis(data.symbol, "reassess");
+    analyzeBtn.textContent = canReassess ? "전체 다시 분석" : "다시 분석";
+    analyzeBtn.title = "웹 검색부터 전부 다시 합니다. 1회 800~1,600원";
+    analyzeBtn.onclick = () => startAnalysis(data.symbol, "refresh");
 
     // 본문(배너·판정·섹션·리스크·안내문)은 기업분석 화면과 같이 쓴다 (public/analysis-view.js)
     const content = analysisContentHtml(data);

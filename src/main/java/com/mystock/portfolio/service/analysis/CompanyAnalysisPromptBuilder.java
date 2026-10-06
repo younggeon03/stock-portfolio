@@ -52,6 +52,17 @@ public class CompanyAnalysisPromptBuilder {
         ResearchHints hints = given == null ? ResearchHints.NONE : given;
         StringBuilder sb = new StringBuilder();
 
+        appendTarget(sb, f);
+        sb.append('\n').append(searchGuide(f, hints)).append('\n');
+        appendHolding(sb, f);
+        appendMarket(sb, f, true);
+        appendHints(sb, hints);
+        appendRequest(sb, f);
+        return sb.toString();
+    }
+
+    /** 종목 기본 정보 */
+    private void appendTarget(StringBuilder sb, CompanyAnalysisFacts f) {
         sb.append("[분석 대상]\n");
         sb.append("종목명: ").append(f.name()).append('\n');
         if (f.englishName() != null && !f.englishName().isBlank()) {
@@ -68,9 +79,10 @@ public class CompanyAnalysisPromptBuilder {
         if (f.sharesOutstanding() != null) {
             sb.append("발행주식수: ").append(comma(f.sharesOutstanding())).append('\n');
         }
+    }
 
-        sb.append('\n').append(searchGuide(f, hints)).append('\n');
-
+    /** 보유 현황. 안 가진 종목이면 현재가만 */
+    private void appendHolding(StringBuilder sb, CompanyAnalysisFacts f) {
         if (!f.held()) {
             // 안 가진 종목. 규칙(판정을 "새로 담을 만한가" 로, POSITION_REVIEW 는 해당 없음)은 시스템 지시문
             // (company-analysis-system.md)에 한 번만 둔다. 여기서는 그 규칙을 켜는 표시만 한다
@@ -80,9 +92,109 @@ public class CompanyAnalysisPromptBuilder {
         } else {
             appendPosition(sb, f);
         }
-        appendMarket(sb, f);
-        appendHints(sb, hints);
-        appendRequest(sb, f);
+    }
+
+    // ── 판단만 새로 ─────────────────────────────────────
+
+    /** 전체 지시문에서 판단만 새로 쓸 때도 필요한 절. 섹션·지표·검색 규칙은 뺀다 */
+    private static final List<String> REASSESS_PARTS = List.of(
+            "## 문장 쓰는 법", "## 판정(verdict) 쓰는 법", "## risks 에 담을 것", "## 보유하지 않은 종목");
+
+    private volatile String reassessSystemPrompt;
+
+    /**
+     * 판단만 새로 쓸 때의 지시문 = 짧은 머리말 + 전체 지시문에서 판정·문장·위험 절만 뽑은 것.
+     *
+     * ★ 판정 규칙을 파일 두 곳에 복사하지 않는다
+     * 복사하면 한쪽만 고쳐져 두 판정이 다른 기준으로 나온다. 전체 지시문(company-analysis-system.md)이 원본이다.
+     * 섹션·지표·검색 규칙은 이 호출에 필요 없어 뺀다. 그만큼 입력이 준다
+     */
+    public String reassessSystemPrompt() {
+        if (reassessSystemPrompt == null) {
+            synchronized (this) {
+                if (reassessSystemPrompt == null) {
+                    reassessSystemPrompt = readResource("prompts/company-reassess-system.md").strip()
+                            + "\n\n" + extractParts(systemPrompt(), REASSESS_PARTS);
+                }
+            }
+        }
+        return reassessSystemPrompt;
+    }
+
+    /** "## " 제목 기준으로 나눠, 고른 제목의 절만 원래 순서대로 이어 붙인다 */
+    static String extractParts(String markdown, List<String> headings) {
+        StringBuilder out = new StringBuilder();
+        boolean keep = false;
+        for (String line : markdown.split("\r?\n", -1)) {
+            if (line.startsWith("## ")) {
+                keep = headings.contains(line.strip());
+            }
+            if (keep) {
+                out.append(line).append('\n');
+            }
+        }
+        return out.toString().strip();
+    }
+
+    /**
+     * 판단만 새로 쓸 때의 요청문.
+     * 저장된 조사 섹션(웹에서 찾은 사실)을 그대로 넣고, 그 위에 지금 시세·보유 현황·뉴스 제목을 얹는다.
+     * 공시 재무 표는 따로 넣지 않는다. 재무 섹션 지표에 이미 붙어 있다(FinancialMetrics)
+     *
+     * @param stored       마지막 전체 분석
+     * @param researchedAt 그 조사를 한 시각. 모델이 "조사는 며칠 전 것" 임을 알고 쓰게 한다
+     */
+    public String reassessUserPrompt(CompanyAnalysisFacts f, ResearchHints given,
+                                     CompanyAnalysisView stored, java.time.LocalDateTime researchedAt) {
+        ResearchHints hints = given == null ? ResearchHints.NONE : given;
+        StringBuilder sb = new StringBuilder();
+        appendTarget(sb, f);
+        appendHolding(sb, f);
+        appendMarket(sb, f, false);
+
+        sb.append("\n[저장된 조사] ★ ").append(researchedAt == null ? "이전" : researchedAt.format(TIME))
+                .append(" 에 웹 검색으로 조사한 결과다. 여기 있는 사실·숫자·적정가를 근거로 써라. 지어내지 마라.\n");
+        for (CompanyAnalysisView.Section s : stored.sections()) {
+            if ("POSITION_REVIEW".equals(s.key()) || !s.applicable()) {
+                continue;
+            }
+            sb.append("\n### ").append(s.title()).append('\n');
+            if (!s.body().isBlank()) {
+                sb.append(s.body().strip()).append('\n');
+            }
+            s.bullets().forEach(b -> sb.append("- ").append(b).append('\n'));
+            for (CompanyAnalysisView.Metric m : s.metrics()) {
+                sb.append("· ").append(m.label()).append(": ");
+                List<String> values = new ArrayList<>();
+                for (CompanyAnalysisView.Metric.Point p : m.points()) {
+                    values.add((p.period().isBlank() ? "" : p.period() + " ") + p.value());
+                }
+                sb.append(String.join(", ", values)).append('\n');
+            }
+        }
+        if (stored.verdict() != null) {
+            sb.append("\n[이전 판정] ").append(stored.verdict().stance()).append(" - ")
+                    .append(stored.verdict().headline()).append('\n');
+            sb.append("가격·보유 상태가 바뀌어 판정이 달라지면 reason 에 무엇이 바뀌었는지 한 문장 넣어라.\n");
+        }
+
+        if (hints.hasHeadlines()) {
+            sb.append("\n[최근 뉴스 헤드라인] ★ 앱이 구글 뉴스에서 받은 최신 제목이다. 제목에 없는 내용을 지어내지 마라.\n");
+            hints.headlines().forEach(h -> sb.append("- ").append(h).append('\n'));
+        }
+        if (hints.hasInstitutions()) {
+            sb.append("\n[큰 기관의 보유 (SEC 13F, 분기말 기준·최대 45일 늦음)] ★ 앱 DB 의 확정값이다.\n");
+            hints.institutionLines().forEach(l -> sb.append("- ").append(l).append('\n'));
+        }
+
+        sb.append("\n[요청]\n");
+        sb.append("웹 검색은 없다. 위 자료만으로 oneLineSummary, verdict, positionReview, risks 를 새로 써서 ")
+                .append("submit_reassessment 도구를 정확히 한 번 호출해라.\n");
+        if (f.held()) {
+            sb.append("positionReview 에서는 [보유현황] 의 숫자를 직접 인용해라.\n");
+        } else {
+            sb.append("보유하지 않은 종목이다. 지시문의 \"보유하지 않은 종목\" 규칙을 따라라.\n");
+        }
         return sb.toString();
     }
 
@@ -118,8 +230,12 @@ public class CompanyAnalysisPromptBuilder {
         sb.append("전체 자산: ").append(comma(f.totalValueKrw())).append("원\n");
     }
 
-    /** 시세 통계·공시 재무·위험 신호·요청. 가진 종목이든 아니든 같다 */
-    private void appendMarket(StringBuilder sb, CompanyAnalysisFacts f) {
+    /**
+     * 시세 통계·공시 재무·위험 신호. 가진 종목이든 아니든 같다
+     *
+     * @param withFinancials 판단만 새로 쓸 때는 false. 공시 재무 표는 저장된 조사 섹션에 이미 붙어 있다
+     */
+    private void appendMarket(StringBuilder sb, CompanyAnalysisFacts f, boolean withFinancials) {
         if (f.annualizedVolatilityPercent() != null) {
             sb.append("\n[시세 통계] 최근 ").append(f.dataPoints()).append("거래일, 토스증권 일봉 기준\n");
             sb.append("연환산 변동성: ").append(strip(f.annualizedVolatilityPercent())).append("%");
@@ -134,7 +250,7 @@ public class CompanyAnalysisPromptBuilder {
             }
         }
 
-        if (f.financials() != null) {
+        if (withFinancials && f.financials() != null) {
             sb.append('\n').append(financials(f.financials(), f.lastPrice()));
         }
 

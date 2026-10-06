@@ -61,6 +61,16 @@ public class CompanyAnalysisStore {
         });
     }
 
+    /** 판단만 새로 쓴 결과를 저장한다. 조사 시각은 엔티티가 그대로 둔다 */
+    @Transactional
+    public void saveReassessment(String symbol, ClaudeCallResult result, boolean includesPosition) {
+        repository.findBySymbol(symbol).ifPresent(entity -> {
+            entity.markReassessed(result.analysisJson(), result.model(),
+                    result.totalPromptTokens(), result.outputTokens(), includesPosition);
+            repository.save(entity);
+        });
+    }
+
     /**
      * 실패를 기록한다.
      * ★ 이전에 성공한 분석은 그대로 둔다. 재분석 실패로 멀쩡한 분석을 잃으면 안 된다.

@@ -24,10 +24,19 @@ public record CompanyAnalysisResponse(
         /** 마지막으로 성공한 시각 */
         LocalDateTime analyzedAt,
 
-        /** 설정한 보관 일수를 넘겼는지. 화면에 "오래된 분석" 으로 표시 */
+        /**
+         * 마지막 전체 분석(웹 조사) 시각. "판단만 새로" 를 했으면 analyzedAt 보다 이르다.
+         * 화면은 둘이 다르면 "판단 갱신 · 조사" 날짜를 둘 다 보인다
+         */
+        LocalDateTime researchedAt,
+
+        /**
+         * 조사가 설정한 보관 일수를 넘겼는지. 화면에 "오래된 분석" 으로 표시하고,
+         * "판단만 새로" 는 이게 false 일 때만 된다(낡은 조사 위에 새 판정을 얹지 않게)
+         */
         boolean stale,
 
-        /** 분석한 지 며칠 됐는지 */
+        /** 조사한 지 며칠 됐는지 */
         Integer ageDays,
 
         /** 마지막 시도가 실패했을 때의 이유 */
@@ -61,7 +70,7 @@ public record CompanyAnalysisResponse(
 
     /** 아직 분석한 적 없는 종목 */
     public static CompanyAnalysisResponse none(String symbol) {
-        return new CompanyAnalysisResponse(symbol, "NONE", null, false, null, null,
+        return new CompanyAnalysisResponse(symbol, "NONE", null, null, false, null, null,
                 DISCLAIMER, null, null, null, null, null, null);
     }
 }
