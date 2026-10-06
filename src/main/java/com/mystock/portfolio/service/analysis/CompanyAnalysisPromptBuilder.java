@@ -41,6 +41,15 @@ public class CompanyAnalysisPromptBuilder {
 
     /** 종목별 요청문 */
     public String userPrompt(CompanyAnalysisFacts f) {
+        return userPrompt(f, ResearchHints.NONE);
+    }
+
+    /**
+     * 종목별 요청문. hints(뉴스 헤드라인·기관 보유)가 있으면 사실로 넣고, 검색 가이드에서 그 주제를 뺀다.
+     * 검색 한 번이 결과 글 수천 토큰을 입력으로 끌고 오므로, 이미 있는 자료로 대신하는 게 가장 값싼 절감이다
+     */
+    public String userPrompt(CompanyAnalysisFacts f, ResearchHints given) {
+        ResearchHints hints = given == null ? ResearchHints.NONE : given;
         StringBuilder sb = new StringBuilder();
 
         sb.append("[분석 대상]\n");
@@ -60,7 +69,7 @@ public class CompanyAnalysisPromptBuilder {
             sb.append("발행주식수: ").append(comma(f.sharesOutstanding())).append('\n');
         }
 
-        sb.append('\n').append(searchGuide(f)).append('\n');
+        sb.append('\n').append(searchGuide(f, hints)).append('\n');
 
         if (!f.held()) {
             // 안 가진 종목. 규칙(판정을 "새로 담을 만한가" 로, POSITION_REVIEW 는 해당 없음)은 시스템 지시문
@@ -72,7 +81,22 @@ public class CompanyAnalysisPromptBuilder {
             appendPosition(sb, f);
         }
         appendMarket(sb, f);
+        appendHints(sb, hints);
+        appendRequest(sb, f);
         return sb.toString();
+    }
+
+    /** 앱이 이미 가진 뉴스 헤드라인·기관 보유. 이 주제는 검색하지 않게 한다 */
+    private void appendHints(StringBuilder sb, ResearchHints hints) {
+        if (hints.hasHeadlines()) {
+            sb.append("\n[최근 뉴스 헤드라인] ★ 앱이 구글 뉴스에서 받은 최신 제목이다. 최근 뉴스는 이걸로 판단하고 따로 검색하지 마라.\n");
+            sb.append("제목만 있다. 제목에 없는 내용을 지어내지 마라. 여기 없는 큰 사건(인수·소송·실적 쇼크)이 의심될 때만 검색해라.\n");
+            hints.headlines().forEach(h -> sb.append("- ").append(h).append('\n'));
+        }
+        if (hints.hasInstitutions()) {
+            sb.append("\n[큰 기관의 보유 (SEC 13F, 분기말 기준·최대 45일 늦음)] ★ 앱 DB 의 확정값이다. 기관 동향은 검색하지 마라.\n");
+            hints.institutionLines().forEach(l -> sb.append("- ").append(l).append('\n'));
+        }
     }
 
     /** 가진 종목의 보유 현황 */
@@ -121,6 +145,10 @@ public class CompanyAnalysisPromptBuilder {
             }
         }
 
+    }
+
+    /** 요청. 맨 끝에 둔다(뉴스·기관 자료 다음) */
+    private void appendRequest(StringBuilder sb, CompanyAnalysisFacts f) {
         sb.append("\n[요청]\n");
         sb.append("위 7개 섹션을 모두 채워서 submit_analysis 도구를 정확히 한 번 호출해라.\n");
         if (f.held()) {
@@ -257,17 +285,33 @@ public class CompanyAnalysisPromptBuilder {
      * 어디를 뒤져야 하는지 알려준다.
      * 국내 종목과 미국 종목은 자료가 있는 곳이 완전히 다르다.
      */
-    private String searchGuide(CompanyAnalysisFacts f) {
+    /**
+     * 무엇을 검색할지. 앱이 이미 넣은 자료(공시 재무·과거 배수·뉴스 제목·기관 보유)는 검색 목록에서 뺀다.
+     * 예전에는 [과거 배수] 를 넣어 놓고도 "과거 PER 범위를 검색하라" 고 시켜 검색 한 번을 버리고 있었다
+     */
+    private String searchGuide(CompanyAnalysisFacts f, ResearchHints hints) {
+        boolean hasHistory = f.financials() != null && f.financials().history() != null
+                && !f.financials().history().isEmpty();
+        StringBuilder topics = new StringBuilder("컨센서스와 목표주가, 회사 가이던스(실적 발표·IR), 사업부별 매출 구성, 산업 동향");
+        if (!hasHistory) {
+            topics.append(", 과거 PER·PBR 범위");
+        }
+        if (!hints.hasHeadlines()) {
+            topics.append(", 최근 뉴스");
+        }
+        String skip = "재무제표" + (hasHistory ? "·과거 PER 범위" : "") + (hints.hasHeadlines() ? "·최근 뉴스" : "")
+                + (hints.hasInstitutions() ? "·기관 동향" : "");
+
         if ("KR".equals(f.marketCountry()) && f.financials() != null) {
             return """
                     [검색 가이드]
                     한국 상장 종목이고 종목코드는 한국거래소 6자리 코드다.
-                    과거 재무는 아래 [공시 재무] 에 DART 원본으로 들어 있다. 재무제표를 검색하느라 검색 횟수를 쓰지 마라.
-                    검색은 전망과 의견에만 써라: 한경컨센서스·증권사 리포트의 컨센서스와 목표주가, 회사 IR 가이던스,
-                    과거 PER·PBR 범위, 사업부별 매출 구성, 산업 동향과 최근 뉴스.
+                    과거 재무는 아래 [공시 재무] 에 DART 원본으로 들어 있다. %s 는 아래 자료에 있으니 검색하지 마라.
+                    검색은 이것에만 써라: %s. 한경컨센서스·증권사 리포트·회사 IR 을 우선한다.
+                    같은 주제를 두 번 검색하지 마라. 검색 결과는 모두 다음 호출에 다시 실려 비용이 쌓인다.
                     검색어에 종목명과 코드를 함께 넣어라. 예: "%s %s 컨센서스", "%s 실적 전망"
                     ★ 종목명과 코드가 모두 일치하는 회사인지 먼저 확인해라. 비슷한 이름의 다른 회사와 헷갈리면 안 된다."""
-                    .formatted(f.name(), f.symbol(), f.name());
+                    .formatted(skip, topics, f.name(), f.symbol(), f.name());
         }
         if ("KR".equals(f.marketCountry())) {
             return """
@@ -283,10 +327,11 @@ public class CompanyAnalysisPromptBuilder {
             return """
                     [검색 가이드]
                     미국 상장 종목이다. 과거 재무는 아래 [공시 재무] 에 SEC EDGAR 원본으로 들어 있다.
-                    재무제표를 검색하느라 검색 횟수를 쓰지 마라.
-                    검색은 전망과 의견에만 써라: 애널리스트 컨센서스와 목표주가, 회사 가이던스(실적 발표·IR),
-                    과거 PER 범위, 사업부별 매출 구성, 산업 동향과 최근 뉴스.
-                    검색어는 영어로 해도 되지만 최종 답변은 한국어로 쓴다.""";
+                    %s 는 아래 자료에 있으니 검색하지 마라.
+                    검색은 이것에만 써라: %s.
+                    같은 주제를 두 번 검색하지 마라. 검색 결과는 모두 다음 호출에 다시 실려 비용이 쌓인다.
+                    검색어는 영어로 해도 되지만 최종 답변은 한국어로 쓴다."""
+                    .formatted(skip, topics);
         }
         return """
                 [검색 가이드]

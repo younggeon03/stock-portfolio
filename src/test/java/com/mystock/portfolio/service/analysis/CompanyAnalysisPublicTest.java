@@ -31,7 +31,8 @@ class CompanyAnalysisPublicTest {
     private final CompanyAnalysisService service = new CompanyAnalysisService(
             mock(UnifiedPortfolioService.class), mock(TossMarketDataService.class), mock(TossAnalysisService.class),
             mock(ClaudeAnalysisClient.class), new CompanyAnalysisPromptBuilder(), store,
-            mock(AnthropicProperties.class), new ObjectMapper(), mock(FilingService.class));
+            mock(AnthropicProperties.class), new ObjectMapper(), mock(FilingService.class),
+            mock(ResearchHintsCollector.class));
 
     private CompanyAnalysis saved(boolean includesPosition) {
         CompanyAnalysis entity = new CompanyAnalysis("MSFT", "마이크로소프트");
