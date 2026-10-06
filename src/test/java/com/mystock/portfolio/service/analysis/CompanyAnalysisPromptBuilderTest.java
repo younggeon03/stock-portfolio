@@ -91,7 +91,7 @@ class CompanyAnalysisPromptBuilderTest {
         assertThat(prompt).contains("| 2025년 | 2025-12-30 | 53,000원 | 6.94배 |");
         assertThat(prompt).contains("적정가의 PER 범위는 이 표에서 잡아라");
         // 재무가 이미 있으니 재무제표 검색에 횟수를 쓰지 말라고 해야 한다
-        assertThat(prompt).contains("재무제표를 검색하느라");
+        assertThat(prompt).containsPattern("재무제표[^\\n]* 는 아래 자료에 있으니 검색하지 마라");
         assertThat(prompt).doesNotContain("사업보고서 재무제표\"");
     }
 
@@ -125,7 +125,7 @@ class CompanyAnalysisPromptBuilderTest {
         assertThat(prompt).contains("000173016825000121");
         // 한국 연결 순이익 경고는 미국 종목에 붙지 않는다
         assertThat(prompt).doesNotContain("비지배지분을 포함한 연결 당기순이익");
-        assertThat(prompt).contains("재무제표를 검색하느라");
+        assertThat(prompt).containsPattern("재무제표[^\\n]* 는 아래 자료에 있으니 검색하지 마라");
     }
 
     @Test
@@ -289,6 +289,58 @@ class CompanyAnalysisPromptBuilderTest {
     @Test
     void 안_가진_종목_규칙은_지시문에_있다() {
         assertThat(builder.systemPrompt()).contains("## 보유하지 않은 종목").contains("applicable: false");
+    }
+
+    /**
+     * 토큰 절감: 앱이 이미 가진 자료(뉴스 제목·기관 보유·과거 배수)는 프롬프트에 넣고 검색 목록에서 뺀다.
+     * 예전에는 [과거 배수] 를 넣고도 "과거 PER 범위를 검색하라" 고 시켰다
+     */
+    @Test
+    void 이미_넣은_자료는_검색하지_말라고_한다() {
+        CompanyAnalysisFacts base = soxl();
+        com.mystock.portfolio.external.filing.CompanyFinancials.Period fy =
+                new com.mystock.portfolio.external.filing.CompanyFinancials.Period("FY2025 (2025-12-31 결산)",
+                        new BigDecimal("1000"), new BigDecimal("200"), new BigDecimal("100"), null, null, null, null, null,
+                        null, null, null, new BigDecimal("10"), new BigDecimal("50"), java.time.LocalDate.of(2025, 12, 31));
+        var fin = com.mystock.portfolio.external.filing.CompanyFinancials.of("DEMO", "SEC EDGAR", "USD", "연결",
+                List.of(fy), null, null, new BigDecimal("200"), "보통주", List.of())
+                .withHistory(List.of(com.mystock.portfolio.external.filing.CompanyFinancials.Valuation.of(
+                        fy, java.time.LocalDate.of(2025, 12, 31), new BigDecimal("180"))));
+        CompanyAnalysisFacts facts = new CompanyAnalysisFacts(
+                "DEMO", "데모", "Demo Corp", "US", "NASDAQ", "USD", "STOCK", null, null,
+                false, null, new BigDecimal("200"), null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, List.of(), fin, base.asOf());
+        ResearchHints hints = new ResearchHints(
+                List.of("데모, 신제품 공개 (Mon, 05 Oct 2026)"),
+                List.of("따라가는 큰 기관 10곳 중 3곳이 들고 있다", "피델리티 (FMR): 비중 1.20%, 앞 분기 대비 늘림 +5.0% (2026-06-30 분기말)"));
+
+        String prompt = builder.userPrompt(facts, hints);
+
+        assertThat(prompt).contains("[최근 뉴스 헤드라인]").contains("데모, 신제품 공개");
+        assertThat(prompt).contains("[큰 기관의 보유").contains("피델리티 (FMR): 비중 1.20%");
+        String guide = prompt.substring(prompt.indexOf("[검색 가이드]"), prompt.indexOf("[보유현황]"));
+        assertThat(guide).contains("재무제표·과거 PER 범위·최근 뉴스·기관 동향 는 아래 자료에 있으니 검색하지 마라");
+        assertThat(guide).doesNotContain("과거 PER·PBR 범위").doesNotContain(", 최근 뉴스");
+        // 요청은 맨 끝
+        assertThat(prompt.indexOf("[요청]")).isGreaterThan(prompt.indexOf("[큰 기관의 보유"));
+    }
+
+    @Test
+    void 자료가_없으면_예전처럼_검색_목록에_남는다() {
+        CompanyAnalysisFacts base = soxl();
+        com.mystock.portfolio.external.filing.CompanyFinancials.Period fy =
+                new com.mystock.portfolio.external.filing.CompanyFinancials.Period("FY2025", new BigDecimal("1"),
+                        null, null, null, null, null, null, null, null, null, null, null, null, null);
+        var fin = com.mystock.portfolio.external.filing.CompanyFinancials.of("DEMO", "SEC EDGAR", "USD", "연결",
+                List.of(fy), null, null, null, "보통주", List.of());
+        CompanyAnalysisFacts facts = new CompanyAnalysisFacts(
+                "DEMO", "데모", null, "US", "NASDAQ", "USD", "STOCK", null, null,
+                false, null, new BigDecimal("200"), null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, List.of(), fin, base.asOf());
+
+        String prompt = builder.userPrompt(facts);
+
+        assertThat(prompt).contains("과거 PER·PBR 범위").contains(", 최근 뉴스").doesNotContain("[최근 뉴스 헤드라인]");
     }
 
     // ── 테스트용 사실 만들기 ──────────────────────────────

@@ -96,6 +96,8 @@ public class CompanyAnalysisService {
     private final AnthropicProperties anthropicProperties;
     private final ObjectMapper objectMapper;
     private final FilingService filingService;
+    /** 뉴스 제목·기관 보유처럼 이미 가진 자료. 넣은 주제는 검색하지 않게 해 토큰을 줄인다 */
+    private final ResearchHintsCollector hintsCollector;
 
     /**
      * 분석을 돌리는 스레드.
@@ -117,7 +119,9 @@ public class CompanyAnalysisService {
                                   CompanyAnalysisStore store,
                                   AnthropicProperties anthropicProperties,
                                   ObjectMapper objectMapper,
-                                  FilingService filingService) {
+                                  FilingService filingService,
+                                  ResearchHintsCollector hintsCollector) {
+        this.hintsCollector = hintsCollector;
         this.portfolioService = portfolioService;
         this.marketDataService = marketDataService;
         this.analysisService = analysisService;
@@ -192,9 +196,13 @@ public class CompanyAnalysisService {
         String symbol = facts.symbol();
         try {
             log.info("{} 기업분석 시작", symbol);
+            // 뉴스 제목·기관 보유를 먼저 모은다(0원). 요청을 붙잡지 않게 백그라운드에서
+            ResearchHints hints = hintsCollector.collect(facts);
+            log.info("{} 프롬프트에 넣은 자료: 뉴스 제목 {}줄, 기관 {}줄", symbol,
+                    hints.headlines().size(), hints.institutionLines().size());
             ClaudeCallResult result = claudeClient.analyze(
                     promptBuilder.systemPrompt(),
-                    promptBuilder.userPrompt(facts));
+                    promptBuilder.userPrompt(facts, hints));
 
             // 저장하기 전에 파싱이 되는지 확인한다. 깨진 JSON 을 저장해두면 화면이 못 읽는다.
             parseAndNormalize(result.analysisJson(), symbol);
