@@ -33,6 +33,12 @@ public record ClaudeCallResult(
         long elapsedSeconds
 ) {
 
+    /** 분석 JSON 만 바꾼 사본. 앱이 공시 재무 표를 끼운 뒤 저장할 때 쓴다 */
+    public ClaudeCallResult withAnalysisJson(String json) {
+        return new ClaudeCallResult(json, model, inputTokens, cacheWriteTokens, cacheReadTokens,
+                outputTokens, webSearchCount, elapsedSeconds);
+    }
+
     /**
      * 프롬프트 전체 크기.
      *
