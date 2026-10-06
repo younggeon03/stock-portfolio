@@ -1,5 +1,8 @@
 package com.mystock.portfolio.external.filing;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mystock.portfolio.domain.StoredFinancials;
+import com.mystock.portfolio.domain.StoredFinancialsRepository;
 import com.mystock.portfolio.external.dart.DartFinancialService;
 import com.mystock.portfolio.external.edgar.EdgarFinancialService;
 import com.mystock.portfolio.external.toss.TossMarketDataService;
@@ -8,7 +11,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -27,14 +32,22 @@ public class FilingService {
 
     private static final Logger log = LoggerFactory.getLogger(FilingService.class);
 
+    /** 저장된 공시 재무를 이만큼 지나면 공시처에서 다시 받는다. 새 분기 공시가 하루 안에 반영된다 */
+    static final Duration REFRESH_AFTER = Duration.ofDays(1);
+
     private final DartFinancialService dart;
     private final EdgarFinancialService edgar;
     private final TossMarketDataService marketData;
+    private final StoredFinancialsRepository store;
+    private final ObjectMapper objectMapper;
 
-    public FilingService(DartFinancialService dart, EdgarFinancialService edgar, TossMarketDataService marketData) {
+    public FilingService(DartFinancialService dart, EdgarFinancialService edgar, TossMarketDataService marketData,
+                         StoredFinancialsRepository store, ObjectMapper objectMapper) {
         this.dart = dart;
         this.edgar = edgar;
         this.marketData = marketData;
+        this.store = store;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -45,16 +58,89 @@ public class FilingService {
      */
     public Optional<CompanyFinancials> find(String symbol, String marketCountry, boolean fund,
                                             BigDecimal shares, BigDecimal price) {
-        if (fund) {
+        if (fund || !("KR".equals(marketCountry) || "US".equals(marketCountry))) {
             return Optional.empty();
         }
-        Optional<CompanyFinancials> found = Optional.empty();
-        if ("KR".equals(marketCountry)) {
-            found = dart.find(symbol, shares, price);
-        } else if ("US".equals(marketCountry)) {
-            found = edgar.find(symbol, shares, price);
+        // 재무(주가 없는 부분)는 DB 에서. PER·PBR 만 지금 주가로 잰다
+        return stored(symbol, marketCountry, shares).map(f -> f.withPrice(price));
+    }
+
+    /**
+     * 저장된 공시 재무. 없거나 하루가 지났으면 공시처에서 다시 받아 저장한다.
+     * 다시 받기가 실패하면 저장된 것(하루 넘은 것이라도)을 쓴다. 공시 재무는 며칠 묵어도 틀리지 않는다.
+     * 과거 PER·PBR 을 못 붙였던 것(그때 토스가 막힘)은 읽을 때 다시 붙여 본다.
+     */
+    private Optional<CompanyFinancials> stored(String symbol, String country, BigDecimal shares) {
+        Optional<StoredFinancials> saved = store.findById(symbol);
+        boolean fresh = saved.isPresent()
+                && saved.get().getFetchedAt().plus(REFRESH_AFTER).isAfter(LocalDateTime.now());
+        if (fresh) {
+            CompanyFinancials f = read(saved.get());
+            if (f != null && !saved.get().isHasHistory() && historyRetryDue(symbol)) {
+                CompanyFinancials withHist = withHistory(symbol, f);
+                if (hasHistory(withHist)) {
+                    save(symbol, country, withHist, saved.get().getFetchedAt());
+                }
+                return Optional.of(withHist);
+            }
+            if (f != null) {
+                return Optional.of(f);
+            }
         }
-        return found.map(f -> withHistory(symbol, f));
+
+        // 주가 없이 받는다. 주가는 읽을 때마다 붙인다
+        Optional<CompanyFinancials> fetched = "KR".equals(country)
+                ? dart.find(symbol, shares, null)
+                : edgar.find(symbol, shares, null);
+        if (fetched.isPresent()) {
+            CompanyFinancials f = withHistory(symbol, fetched.get());
+            save(symbol, country, f, LocalDateTime.now());
+            return Optional.of(f);
+        }
+        if (saved.isPresent()) {
+            log.info("{} 공시 재무를 새로 받지 못해 {} 에 받은 것을 씁니다", symbol, saved.get().getFetchedAt());
+            return Optional.ofNullable(read(saved.get()));
+        }
+        return Optional.empty();
+    }
+
+    private void save(String symbol, String country, CompanyFinancials f, LocalDateTime fetchedAt) {
+        try {
+            StoredFinancials row = store.findById(symbol).orElseGet(() -> new StoredFinancials(symbol, country));
+            // 저장본에는 주가로 잰 값(PER·PBR)을 넣지 않는다. 읽을 때 다시 잰다
+            row.update(objectMapper.writeValueAsString(f.withPrice(null)), hasHistory(f), fetchedAt);
+            store.save(row);
+        } catch (Exception e) {
+            // 저장이 실패해도 이번 응답은 나간다. 다음에 다시 받을 뿐이다
+            log.warn("{} 공시 재무 저장 실패: {}", symbol, e.getMessage());
+        }
+    }
+
+    private CompanyFinancials read(StoredFinancials row) {
+        try {
+            return objectMapper.readValue(row.getFinancialsJson(), CompanyFinancials.class);
+        } catch (Exception e) {
+            // 저장 형식이 바뀌어 못 읽으면 없는 것으로 보고 다시 받는다
+            log.warn("{} 저장된 공시 재무를 읽지 못했습니다: {}", row.getSymbol(), e.getMessage());
+            return null;
+        }
+    }
+
+    /** 과거 종가를 못 붙인 종목을 마지막으로 다시 시도한 때. 토스가 막혀 있으면 읽을 때마다 1초씩 헛걸음을 해서 */
+    private final Map<String, LocalDateTime> historyTried = new java.util.concurrent.ConcurrentHashMap<>();
+    static final Duration HISTORY_RETRY = Duration.ofHours(1);
+
+    private boolean historyRetryDue(String symbol) {
+        LocalDateTime last = historyTried.get(symbol);
+        if (last != null && last.plus(HISTORY_RETRY).isAfter(LocalDateTime.now())) {
+            return false;
+        }
+        historyTried.put(symbol, LocalDateTime.now());
+        return true;
+    }
+
+    private static boolean hasHistory(CompanyFinancials f) {
+        return f.history() != null && !f.history().isEmpty();
     }
 
     /**

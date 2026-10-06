@@ -76,14 +76,25 @@ public record CompanyFinancials(
     public static CompanyFinancials of(String corpName, String filer, String currency, String statementKind,
                                        List<Period> annual, Period interim, Period ttm,
                                        BigDecimal price, String shareBasis, List<Source> sources) {
-        Period earningsBase = ttm != null ? ttm : annual.isEmpty() ? null : annual.get(annual.size() - 1);
+        return new CompanyFinancials(corpName, filer, currency, statementKind,
+                annual, interim, ttm, null, null, shareBasis, List.of(), sources).withPrice(price);
+    }
+
+    /**
+     * 지금 주가로 PER·PBR 을 다시 잰 사본. 공시 재무는 DB 에 주가 없이 저장해 두고(분기에 한 번 바뀜),
+     * 주가에 따라 매일 바뀌는 배수는 읽을 때마다 여기서 계산한다.
+     * PER 은 최근 4분기, 없으면 최근 연간. PBR 은 가장 최근 재무상태. price 가 null 이면 둘 다 빈다
+     */
+    public CompanyFinancials withPrice(BigDecimal price) {
+        List<Period> years = annual == null ? List.of() : annual;
+        Period earningsBase = ttm != null ? ttm : years.isEmpty() ? null : years.get(years.size() - 1);
         Period bookBase = interim != null ? interim : earningsBase;
-        BigDecimal per = earningsBase == null || earningsBase.eps() == null || earningsBase.eps().signum() <= 0
+        BigDecimal newPer = earningsBase == null || earningsBase.eps() == null || earningsBase.eps().signum() <= 0
                 ? null : divide(price, earningsBase.eps(), 2);
-        BigDecimal pbr = bookBase == null || bookBase.bps() == null || bookBase.bps().signum() <= 0
+        BigDecimal newPbr = bookBase == null || bookBase.bps() == null || bookBase.bps().signum() <= 0
                 ? null : divide(price, bookBase.bps(), 2);
         return new CompanyFinancials(corpName, filer, currency, statementKind,
-                annual, interim, ttm, per, pbr, shareBasis, List.of(), sources);
+                annual, interim, ttm, newPer, newPbr, shareBasis, history == null ? List.of() : history, sources);
     }
 
     /**
