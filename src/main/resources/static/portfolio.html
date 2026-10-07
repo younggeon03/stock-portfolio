@@ -67,6 +67,16 @@
     <!-- 증권사별 금액 -->
     <section class="brokers" id="brokers"></section>
 
+    <!-- 평가금액 추이. 평일 장 마감 뒤 하루 한 번 남기는 스냅샷을 잇는다 (/api/portfolio/snapshots) -->
+    <section class="history" aria-labelledby="historyHead">
+        <div class="table-head">
+            <h2 id="historyHead">평가금액 추이</h2>
+            <span class="table-count" id="historyMeta"></span>
+        </div>
+        <div class="history-chart" id="historyChart" hidden></div>
+        <p class="history-note" id="historyNote"></p>
+    </section>
+
     <!--
       보유종목.
       기본으로 다섯 줄만 보이고 나머지는 스크롤로 본다. 표가 화면을 다 먹지 않게.

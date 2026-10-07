@@ -184,6 +184,7 @@ async function loadAll() {
         renderHero(data);
         renderAlloc(currentItems);
         renderBrokers(data.brokers);
+        loadHistory();
         renderTable(currentItems);
 
         const symbols = currentItems.map(i => i.symbol);
@@ -265,6 +266,97 @@ function linkHighlight(symbol, on) {
     if (row) row.classList.toggle("lit", on);
     const seg = allocBox.querySelector(`.alloc-seg[data-symbol="${CSS.escape(symbol)}"]`);
     if (seg) seg.classList.toggle("lit", on);
+}
+
+// ── 평가금액 추이 (장 마감 스냅샷) ──────────────────────
+
+const historyChartHost = document.getElementById("historyChart");
+const historyMeta = document.getElementById("historyMeta");
+const historyNote = document.getElementById("historyNote");
+let historyChart = null;
+let historyResize = null;
+
+/**
+ * 하루 한 번 남긴 스냅샷을 선으로 잇는다. 표가 다 그려진 뒤 따로 부른다(느려도 표를 붙잡지 않게).
+ * 실패해도 조용히 안내만 한다. 이력은 부가 정보다
+ */
+async function loadHistory() {
+    try {
+        const res = await apiFetch("/api/portfolio/snapshots?days=365");
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        renderHistory(await res.json());
+    } catch (e) {
+        historyChartHost.hidden = true;
+        historyMeta.textContent = "";
+        historyNote.textContent = "평가금액 이력을 불러오지 못했습니다.";
+    }
+}
+
+/**
+ * ★ 선 색은 검정(평가금액)과 회색 점선(매입금액)이다.
+ * 빨강·파랑은 등락에만 쓴다(결정기록 008). 선 자체는 오르내림이 아니라 금액이라 색을 입히지 않고,
+ * 첫날 대비 변화율 숫자에만 등락 색을 쓴다.
+ * 차트는 캔버스라 CSS 변수를 스스로 못 읽는다. 그릴 때 읽어 넘긴다
+ */
+function renderHistory(points) {
+    if (historyResize) { historyResize.disconnect(); historyResize = null; }
+    if (historyChart) { historyChart.remove(); historyChart = null; }
+
+    if (!points || points.length === 0) {
+        historyChartHost.hidden = true;
+        historyMeta.textContent = "";
+        historyNote.textContent = "아직 쌓인 날이 없습니다. 평일 장 마감 뒤(16:10) 하루 한 번 쌓입니다.";
+        return;
+    }
+
+    const first = points[0];
+    const last = points[points.length - 1];
+    const change = Number(first.totalValueKrw) === 0 ? 0
+        : (Number(last.totalValueKrw) - Number(first.totalValueKrw)) * 100 / Number(first.totalValueKrw);
+    historyMeta.innerHTML = `${points.length}일 · 첫날(${first.date.substring(5)}) 대비 `
+        + `<span class="${colorClass(change)}">${formatRate(change)}</span>`;
+
+    // 최근 대사 결과. 어긋났으면 굵게(색 대신 무게로 강조)
+    const day = last.date.substring(5);
+    historyNote.innerHTML = last.mismatchCount > 0
+        ? `최근 대사(${day}): <strong>증권사 합계와 ${last.mismatchCount}곳이 어긋났습니다.</strong> 운영 문서의 "장 마감 스냅샷과 대사" 를 보세요.`
+        : `최근 대사(${day}): 앱이 더한 합계가 증권사 합계와 맞습니다.`;
+
+    // 점 하나로는 선이 안 된다
+    const LC = window.LightweightCharts;
+    if (points.length < 2 || !LC) {
+        historyChartHost.hidden = true;
+        return;
+    }
+    historyChartHost.hidden = false;
+
+    const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    historyChart = LC.createChart(historyChartHost, {
+        width: historyChartHost.clientWidth,
+        height: historyChartHost.clientHeight,
+        layout: { background: { color: css("--bg") || "#fff" }, textColor: css("--ink-3"), fontSize: 11,
+                  fontFamily: getComputedStyle(document.body).fontFamily },
+        grid: { vertLines: { visible: false }, horzLines: { color: css("--rule") } },
+        rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.1, bottom: 0.1 } },
+        timeScale: { borderVisible: false },
+        handleScroll: false, handleScale: false,
+        localization: { priceFormatter: p => Math.round(p / 10000).toLocaleString("ko-KR") + "만" }
+    });
+    const value = historyChart.addSeries(LC.LineSeries, {
+        color: css("--ink"), lineWidth: 2, priceLineVisible: false, title: "평가"
+    });
+    const cost = historyChart.addSeries(LC.LineSeries, {
+        color: css("--ink-3"), lineWidth: 1, lineStyle: 2, priceLineVisible: false,
+        lastValueVisible: false, crosshairMarkerVisible: false, title: "매입"
+    });
+    value.setData(points.map(p => ({ time: p.date, value: Number(p.totalValueKrw) })));
+    cost.setData(points.map(p => ({ time: p.date, value: Number(p.totalPurchaseKrw) })));
+    historyChart.timeScale().fitContent();
+
+    historyResize = new ResizeObserver(() => {
+        if (historyChart) historyChart.applyOptions({ width: historyChartHost.clientWidth });
+    });
+    historyResize.observe(historyChartHost);
 }
 
 function renderBrokers(brokers) {
