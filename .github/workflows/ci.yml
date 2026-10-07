@@ -57,6 +57,11 @@ jobs:
                     printf "| **전체** | **%d%%** | %d/%d |\n", c_total=tc*100/(tm+tc), tc, tm+tc }' | sort
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # 계산 코드 패키지가 최소선 밑으로 떨어지면 막는다. 기준과 이유는 pom.xml 의 jacoco 설정 주석.
+      # 요약(위)을 먼저 남기고 검사한다. 걸렸을 때 어느 패키지가 몇 % 인지 바로 보이게
+      - name: 커버리지 최소선
+        run: ./mvnw -B -q jacoco:check
+
       - name: 커버리지 보고서 보관
         if: always()
         uses: actions/upload-artifact@v4
