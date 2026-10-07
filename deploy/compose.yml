@@ -15,6 +15,11 @@ services:
       DB_URL: jdbc:mysql://mysql:3306/portfolio?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
       DB_USERNAME: portfolio
       DB_PASSWORD: ${COMPOSE_DB_PASSWORD:?.env 에 COMPOSE_DB_PASSWORD 를 넣으세요}
+      # 서버 로그는 한 줄에 JSON 하나(requestId 로 거름). SQL 줄글이 끼면 JSON 이 깨져서 끈다. 소문자 그대로 쓴다
+      LOG_FORMAT: json
+      SHOW_SQL: "false"
+      # 시작할 때 찍는 스프링 글자 그림도 줄글이라 끈다
+      SPRING_MAIN_BANNER_MODE: "off"
     ports:
       # 헬스체크·지표는 서버 안에서만. deploy.sh 가 여기를 보고 성공/롤백을 정한다
       - "127.0.0.1:${MGMT_HOST_PORT:-8081}:8081"

@@ -94,6 +94,10 @@ jobs:
           # 관측을 끈 서버(1GB)에서도 해석돼야 한다. Grafana 비밀번호가 없어도 앱 배포가 막히면 안 된다
           GRAFANA_ADMIN_PASSWORD= docker compose -f deploy/compose.yml config -q
 
+      # Caddy 는 설정이 틀리면 컨테이너가 뜨자마자 죽어 사이트 전체가 내려간다. 서버에 가기 전에 여기서 잡는다
+      - name: Caddyfile 검사
+        run: docker run --rm -e DOMAIN=ci.example.com -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2.8 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
       - name: Prometheus 설정 검사 (promtool)
         run: docker run --rm --entrypoint promtool -v "$PWD/deploy/monitoring:/etc/prometheus:ro" "$PROM_IMAGE" check config /etc/prometheus/prometheus.yml
 

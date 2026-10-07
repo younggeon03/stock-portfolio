@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    로그 모양 두 가지. LOG_FORMAT 환경변수로 고른다 (application.yml 의 logging.appender).
+
+    text (기본, 내 PC)  사람이 읽는 줄글. 스프링 기본 모양에 요청 ID 를 [ ] 로 붙였다
+    json (서버)         한 줄에 JSON 하나. jq 나 로그 수집기(Loki·ELK)가 requestId·level 로 거른다
+                        예: docker compose logs app | grep '^{' | jq 'select(.requestId=="3f2a...")'
+
+    두 appender 를 다 연결하고 LogFormatFilter 가 하나만 통과시킨다. 이유는 그 클래스 주석에.
+-->
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- local: 이 파일 안에서만 쓰는 변수. context 로 두면 JSON 로그마다 이 값이 필드로 붙는다 -->
+    <springProperty scope="local" name="LOG_APPENDER" source="logging.appender" defaultValue="text"/>
+
+    <appender name="text" class="ch.qos.logback.core.ConsoleAppender">
+        <filter class="com.mystock.portfolio.config.LogFormatFilter">
+            <expected>text</expected>
+            <actual>${LOG_APPENDER}</actual>
+        </filter>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %5p [%X{requestId:--}] %-40.40logger{39} : %m%n%wEx</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <appender name="json" class="ch.qos.logback.core.ConsoleAppender">
+        <filter class="com.mystock.portfolio.config.LogFormatFilter">
+            <expected>json</expected>
+            <actual>${LOG_APPENDER}</actual>
+        </filter>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <!-- MDC(requestId)는 기본으로 필드가 된다. 어느 앱의 로그인지 한 칸 더 붙인다 -->
+            <customFields>{"app":"stock-portfolio"}</customFields>
+            <fieldNames>
+                <levelValue>[ignore]</levelValue>
+                <version>[ignore]</version>
+            </fieldNames>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="text"/>
+        <appender-ref ref="json"/>
+    </root>
+</configuration>
