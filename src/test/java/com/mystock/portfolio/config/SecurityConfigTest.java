@@ -56,6 +56,8 @@ class SecurityConfigTest {
         void 내_잔고_API_는_로그인_없이_401_이다() throws Exception {
             // 로그인 화면으로 넘기면 fetch 가 HTML 을 JSON 으로 읽다 깨진다. 401 이어야 화면이 로그인으로 보낸다
             mvc.perform(get("/api/portfolio/unified")).andExpect(status().isUnauthorized());
+            // 매일 평가금액 이력과 대사 결과도 내 잔고다
+            mvc.perform(get("/api/portfolio/snapshots")).andExpect(status().isUnauthorized());
         }
 
         @Test

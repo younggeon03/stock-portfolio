@@ -49,15 +49,45 @@ public class NamuhBrokerageClient implements BrokerageClient {
      */
     @Override
     public List<BrokerageHolding> holdings(String ownerKey) {
+        return statement(ownerKey).holdings();
+    }
+
+    /**
+     * 보유 종목 + 나무가 밝힌 합계(국내 총평가금액, 해외 원화 평가금액 합). 국내·해외 두 번 조회한다.
+     * 앱 쪽 합계는 표에 실제로 들어간 종목(수량 0·종목코드 없는 줄을 거른 뒤)만 더한다.
+     * 걸러진 줄에 금액이 있으면 대사가 그 차이를 잡는다
+     */
+    @Override
+    public BrokerageStatement statement(String ownerKey) {
         List<BrokerageHolding> all = new ArrayList<>();
-        all.addAll(domesticHoldings());
-        all.addAll(overseasHoldings());
-        return all;
+        List<BrokerageStatement.ReportedTotal> totals = new ArrayList<>();
+
+        NamuhKrBalanceResponse domestic = holdingsService.domesticBalance(null);
+        List<BrokerageHolding> kr = domesticHoldings(domestic);
+        all.addAll(kr);
+        if (domestic.summary() != null && domestic.summary().totalEvaluationAmount() != null) {
+            totals.add(new BrokerageStatement.ReportedTotal("국내", "KRW",
+                    domestic.summary().totalEvaluationAmount(), sumKrw(kr)));
+        }
+
+        NamuhGbBalanceResponse overseas = overseasBalance();
+        if (overseas != null) {
+            List<BrokerageHolding> us = overseasHoldings(overseas);
+            all.addAll(us);
+            if (overseas.summary() != null && overseas.summary().evaluationAmountSumKrw() != null) {
+                totals.add(new BrokerageStatement.ReportedTotal("해외(원화)", "KRW",
+                        overseas.summary().evaluationAmountSumKrw(), sumKrw(us)));
+            }
+        }
+        return new BrokerageStatement(all, totals);
+    }
+
+    private static BigDecimal sumKrw(List<BrokerageHolding> holdings) {
+        return holdings.stream().map(BrokerageHolding::marketValueKrw).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     /** 국내 주식. 전부 원화라 환산이 필요 없다. */
-    private List<BrokerageHolding> domesticHoldings() {
-        NamuhKrBalanceResponse response = holdingsService.domesticBalance(null);
+    private List<BrokerageHolding> domesticHoldings(NamuhKrBalanceResponse response) {
         if (response.items() == null) {
             return List.of();
         }
@@ -80,17 +110,19 @@ public class NamuhBrokerageClient implements BrokerageClient {
                 .toList();
     }
 
-    /** 해외(미국) 주식. 원화 환산 금액을 나무가 직접 준다. */
-    private List<BrokerageHolding> overseasHoldings() {
-        NamuhGbBalanceResponse response;
+    /** 해외 잔고 응답. 실패하면 null (국내 보유분은 그대로 보여준다) */
+    private NamuhGbBalanceResponse overseasBalance() {
         try {
-            response = holdingsService.overseasBalance(null);
+            return holdingsService.overseasBalance(null);
         } catch (Exception e) {
             // 해외 잔고가 없거나 조회에 실패해도 국내 보유분은 보여줘야 한다
             log.warn("나무증권 해외 잔고 조회 실패(국내 보유분만 사용): {}", e.getMessage());
-            return List.of();
+            return null;
         }
+    }
 
+    /** 해외(미국) 주식. 원화 환산 금액을 나무가 직접 준다. */
+    private List<BrokerageHolding> overseasHoldings(NamuhGbBalanceResponse response) {
         if (response.items() == null) {
             return List.of();
         }

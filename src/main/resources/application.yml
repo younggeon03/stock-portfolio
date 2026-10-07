@@ -164,6 +164,13 @@ thirteenf:
 openfigi:
   api-key: ${OPENFIGI_API_KEY:}
 
+# 장 마감 스냅샷과 대사 (PortfolioSnapshotService). 평일 16:10 에 찍고 18:10·20:10 은 실패했을 때만 다시 시도
+snapshot:
+  cron: "0 10 16,18,20 * * MON-FRI"
+  # 직접 입력한 종목까지 넣으려면 나의 포트폴리오 화면의 식별값(브라우저 localStorage 의 portfolioOwnerKey).
+  # 비우면 증권사 보유만 찍는다. 배치에는 브라우저가 없어서 누구의 직접 입력인지 알 수 없다
+  owner-key: ${SNAPSHOT_OWNER_KEY:}
+
 # 이 앱의 바깥 주소. 피드·알림 글 속 링크에 쓴다. 서버에서는 https://도메인
 app:
   base-url: ${APP_BASE_URL:http://localhost:8080}

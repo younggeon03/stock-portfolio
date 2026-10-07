@@ -104,3 +104,22 @@ groups:
         annotations:
           summary: "바깥 API 서킷 브레이커가 열렸습니다"
           description: "그 호스트가 계속 실패해 잠시 호출을 멈췄습니다. 화면의 해당 칸이 비어 보일 수 있습니다. 상대 서비스 장애인지, 키·IP 문제인지 앱 로그를 보세요."
+
+      # 대사 불일치: 마지막 장 마감 스냅샷에서 앱이 더한 합계와 증권사가 밝힌 합계가 허용 오차(0.1%)를 넘게 달랐다.
+      # 값은 다음 스냅샷까지 그대로라 "다음 날 고쳐지면 꺼진다"
+      - alert: ReconciliationMismatch
+        expr: max(portfolio_reconciliation_mismatches{job="stock-portfolio"}) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "잔고 대사가 맞지 않습니다"
+          description: "앱이 종목별로 더한 평가금액이 증권사 합계와 다릅니다. 나의 포트폴리오의 대사 칸이나 GET /api/portfolio/snapshots/{오늘} 로 어느 증권사·범위인지 보세요. 걸러진 종목, 새 통화, 증권사 응답 모양 변경을 의심합니다."
+
+      # 스냅샷이 오늘 세 번(16·18·20시) 다 실패했다. 실패가 한두 번이면 재시도가 메우므로 알리지 않는다
+      - alert: SnapshotFailing
+        expr: sum(increase(portfolio_snapshot_runs_total{job="stock-portfolio",outcome="failure"}[6h])) >= 3
+        labels:
+          severity: warning
+        annotations:
+          summary: "오늘 장 마감 스냅샷을 못 남겼습니다"
+          description: "세 번 모두 증권사 조회에 실패했습니다. 오늘 날짜는 이력에 빈 칸으로 남습니다(지난 날은 다시 만들 수 없음). 토스 403(허용 IP)·나무 토큰을 먼저 보세요. 고친 뒤 오늘 안이면 POST /api/portfolio/snapshots 로 다시 찍을 수 있습니다."

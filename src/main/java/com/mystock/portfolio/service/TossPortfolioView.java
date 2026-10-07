@@ -32,6 +32,12 @@ public record TossPortfolioView(
         /** 적용한 환율 (1달러 = ?원). 미국 주식이 없으면 null */
         BigDecimal usdKrwRate,
 
+        /** 토스가 응답 요약에 적은 원화 종목 평가금액 합계(원). 대사용. 안 주면 null */
+        BigDecimal reportedValueKrw,
+
+        /** 토스가 응답 요약에 적은 달러 종목 평가금액 합계(달러). 대사용. 미국 주식이 없으면 null */
+        BigDecimal reportedValueUsd,
+
         /** 종목별 상세 */
         List<Item> items
 ) {
