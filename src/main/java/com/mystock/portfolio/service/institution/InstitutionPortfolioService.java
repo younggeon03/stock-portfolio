@@ -71,8 +71,12 @@ public class InstitutionPortfolioService {
      */
     private final QueryCache cache = new QueryCache(64);
 
-    /** 배치가 끝났거나 새 제출을 저장했다 → 비운다 */
+    /**
+     * 배치가 끝났거나 새 제출을 저장했다 → 비운다.
+     * 순서를 맨 앞(0)으로 둔다. 같은 이벤트를 듣는 예열(InstitutionCacheWarmer, 100)이 비운 뒤에 채워야 한다
+     */
     @EventListener({ThirteenFDataChangedEvent.class, NewFilingEvent.class})
+    @org.springframework.core.annotation.Order(0)
     public void onDataChanged() {
         cache.clear();
     }
