@@ -59,8 +59,12 @@ jobs:
 
       # 계산 코드 패키지가 최소선 밑으로 떨어지면 막는다. 기준과 이유는 pom.xml 의 jacoco 설정 주석.
       # 요약(위)을 먼저 남기고 검사한다. 걸렸을 때 어느 패키지가 몇 % 인지 바로 보이게
+      # ★ 실행 데이터(jacoco.exec)가 없으면 jacoco:check 는 "건너뜀" 만 찍고 통과한다. 검사가 진짜 돌았는지 문구로 확인한다
       - name: 커버리지 최소선
-        run: ./mvnw -B -q jacoco:check
+        run: |
+          ./mvnw -B jacoco:check | tee /tmp/jacoco-check.log
+          grep -q "All coverage checks have been met" /tmp/jacoco-check.log \
+            || { echo "커버리지 검사가 실제로 돌지 않았습니다 (실행 데이터 없음?)"; exit 1; }
 
       - name: 커버리지 보고서 보관
         if: always()
