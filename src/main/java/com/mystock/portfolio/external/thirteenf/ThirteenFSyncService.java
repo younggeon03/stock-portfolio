@@ -102,7 +102,8 @@ public class ThirteenFSyncService {
         if (!secClient.isConfigured()) {
             return;   // SEC 연락처가 없으면 조용히 건너뛴다. 공시 재무와 같은 규칙
         }
-        runNow();
+        // 요청 없이 시작하는 일이라 요청 ID 가 없다. 배치 번호를 달아 이번 회차의 로그 줄을 묶는다
+        com.mystock.portfolio.common.LogContext.job("batch-13f", this::runNow).run();
     }
 
     /** 뒤에서 돌린다. 이미 돌고 있으면 false */
@@ -110,7 +111,8 @@ public class ThirteenFSyncService {
         if (running.get()) {
             return false;
         }
-        worker.submit(this::runNow);
+        // 수동 실행은 그 요청의 ID 를 이어 간다(누가 눌러서 시작한 회차인지 남게)
+        worker.submit(com.mystock.portfolio.common.LogContext.carry(this::runNow));
         return true;
     }
 

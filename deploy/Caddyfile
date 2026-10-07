@@ -10,6 +10,9 @@
 	# X-Forwarded-For·Proto 는 Caddy 가 붙인다. 앱은 이걸로 사용자 IP(호출 한도)와 https 여부(쿠키)를 안다.
 	# 바깥에서 보낸 X-Forwarded-For 는 Caddy 가 믿지 않고 덮어쓴다(trusted_proxies 를 안 정했으므로)
 	reverse_proxy app:8080 {
+		# 요청마다 번호를 붙여 넘긴다. 앱(RequestIdFilter)이 이 번호를 로그와 응답 헤더 X-Request-Id 에 쓴다.
+		# 바깥에서 보낸 같은 이름 헤더는 이 값으로 덮어쓴다(아무나 번호를 정하지 못하게)
+		header_up X-Request-Id {http.request.uuid}
 		# 배포로 앱이 다시 뜨는 20초 남짓 동안 502 를 돌려주지 않고, 그 요청을 잡고 기다렸다 넘긴다.
 		# 리허설에서 이걸 넣기 전에는 배포마다 13초쯤 502 가 났다
 		lb_try_duration 30s

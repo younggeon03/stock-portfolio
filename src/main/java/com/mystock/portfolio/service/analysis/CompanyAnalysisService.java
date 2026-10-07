@@ -2,6 +2,7 @@ package com.mystock.portfolio.service.analysis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mystock.portfolio.common.AppException;
+import com.mystock.portfolio.common.LogContext;
 import com.mystock.portfolio.domain.CompanyAnalysis;
 import com.mystock.portfolio.external.anthropic.AnthropicProperties;
 import com.mystock.portfolio.external.anthropic.ClaudeAnalysisClient;
@@ -185,7 +186,8 @@ public class CompanyAnalysisService {
         store.beginRun(symbol, facts.name());
 
         // 4. 백그라운드로 넘긴다
-        worker.submit(() -> runAnalysis(facts));
+        // 요청 ID 를 들고 간다. 그래야 "분석 시작" 과 몇 분 뒤 "분석 실패" 를 같은 번호로 잇는다
+        worker.submit(LogContext.carry(() -> runAnalysis(facts)));
 
         return store.find(symbol).map(this::toResponse)
                 .orElseGet(() -> CompanyAnalysisResponse.none(symbol));
@@ -223,7 +225,7 @@ public class CompanyAnalysisService {
 
         store.beginRun(symbol, facts.name());
         LocalDateTime researchedAt = entity.getResearchedAt();
-        worker.submit(() -> runReassessment(facts, current.analysis(), researchedAt, includesPosition));
+        worker.submit(LogContext.carry(() -> runReassessment(facts, current.analysis(), researchedAt, includesPosition)));
 
         return store.find(symbol).map(this::toResponse)
                 .orElseGet(() -> CompanyAnalysisResponse.none(symbol));

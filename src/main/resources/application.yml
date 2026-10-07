@@ -86,7 +86,13 @@ spring:
     properties:
       hibernate:
         format_sql: true
-    show-sql: true
+    # SQL 을 화면에 찍는다. 내 PC 에서 쿼리를 보려고 켜 두고 서버에서는 끈다(SHOW_SQL=false).
+    # 이건 로거가 아니라 System.out 으로 바로 나가서, 서버의 JSON 로그 사이에 줄글이 끼어 jq 가 깨진다
+    show-sql: ${SHOW_SQL:true}
+
+# 로그 모양. text(내 PC, 줄글) 또는 json(서버, 한 줄에 JSON 하나). logback-spring.xml 참고
+logging:
+  appender: ${LOG_FORMAT:text}
 
 # 토스증권 Open API 설정.
 # ${TOSS_CLIENT_ID:} 는 "TOSS_CLIENT_ID 값이 있으면 쓰고, 없으면 빈 문자열" 이라는 뜻이다.
