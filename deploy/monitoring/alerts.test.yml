@@ -118,3 +118,42 @@ tests:
             exp_annotations:
               summary: "바깥 API 서킷 브레이커가 열렸습니다"
               description: "그 호스트가 계속 실패해 잠시 호출을 멈췄습니다. 화면의 해당 칸이 비어 보일 수 있습니다. 상대 서비스 장애인지, 키·IP 문제인지 앱 로그를 보세요."
+
+  # 대사 불일치가 하나라도 있으면 바로 울리고, 다음 스냅샷에서 0 이 되면 꺼진다
+  - interval: 1m
+    input_series:
+      - series: 'portfolio_reconciliation_mismatches{job="stock-portfolio",instance="app:8081"}'
+        values: '0 0 1 1 0'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: ReconciliationMismatch
+        exp_alerts: []
+      - eval_time: 2m
+        alertname: ReconciliationMismatch
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: "잔고 대사가 맞지 않습니다"
+              description: "앱이 종목별로 더한 평가금액이 증권사 합계와 다릅니다. 나의 포트폴리오의 대사 칸이나 GET /api/portfolio/snapshots/{오늘} 로 어느 증권사·범위인지 보세요. 걸러진 종목, 새 통화, 증권사 응답 모양 변경을 의심합니다."
+      - eval_time: 4m
+        alertname: ReconciliationMismatch
+        exp_alerts: []
+
+  # 스냅샷 실패 두 번(재시도가 메울 수 있음)은 조용하고, 세 번째에 울린다. 2시간 간격 시도를 1시간 칸으로 흉내 낸다
+  - interval: 1h
+    input_series:
+      - series: 'portfolio_snapshot_runs_total{job="stock-portfolio",instance="app:8081",outcome="failure"}'
+        values: '0 1 1 2 2 3'
+    alert_rule_test:
+      - eval_time: 3h
+        alertname: SnapshotFailing
+        exp_alerts: []
+      - eval_time: 5h
+        alertname: SnapshotFailing
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: "오늘 장 마감 스냅샷을 못 남겼습니다"
+              description: "세 번 모두 증권사 조회에 실패했습니다. 오늘 날짜는 이력에 빈 칸으로 남습니다(지난 날은 다시 만들 수 없음). 토스 403(허용 IP)·나무 토큰을 먼저 보세요. 고친 뒤 오늘 안이면 POST /api/portfolio/snapshots 로 다시 찍을 수 있습니다."

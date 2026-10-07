@@ -41,8 +41,34 @@ public class TossBrokerageClient implements BrokerageClient {
      */
     @Override
     public List<BrokerageHolding> holdings(String ownerKey) {
-        TossPortfolioView view = portfolioService.load();
+        return toHoldings(portfolioService.load());
+    }
 
+    /**
+     * 보유 종목 + 토스가 밝힌 통화별 합계. 한 번의 조회로 둘 다 만든다.
+     * 앱 쪽 합계는 종목별 "거래통화 기준" 평가금액을 같은 통화끼리 더한다. 환율이 끼면 대사가 환율 차이를 잡게 된다
+     */
+    @Override
+    public BrokerageStatement statement(String ownerKey) {
+        TossPortfolioView view = portfolioService.load();
+        List<BrokerageStatement.ReportedTotal> totals = new java.util.ArrayList<>();
+        if (view.reportedValueKrw() != null) {
+            totals.add(new BrokerageStatement.ReportedTotal("KRW", "KRW", view.reportedValueKrw(), nativeSum(view, "KRW")));
+        }
+        if (view.reportedValueUsd() != null) {
+            totals.add(new BrokerageStatement.ReportedTotal("USD", "USD", view.reportedValueUsd(), nativeSum(view, "USD")));
+        }
+        return new BrokerageStatement(toHoldings(view), totals);
+    }
+
+    private static java.math.BigDecimal nativeSum(TossPortfolioView view, String currency) {
+        return view.items().stream()
+                .filter(i -> currency.equalsIgnoreCase(i.currency()))
+                .map(TossPortfolioView.Item::marketValue)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+    }
+
+    private static List<BrokerageHolding> toHoldings(TossPortfolioView view) {
         return view.items().stream()
                 .map(item -> new BrokerageHolding(
                         Broker.TOSS,

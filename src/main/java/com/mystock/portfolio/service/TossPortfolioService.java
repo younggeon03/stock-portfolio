@@ -107,8 +107,19 @@ public class TossPortfolioService {
                 totalProfitLossKrw,
                 percentOf(totalProfitLossKrw, totalPurchaseKrw),
                 usdKrwRate,
+                // 토스는 통화별로 따로 합계를 준다. 앱이 더한 값과 맞춰 보는 대사에 쓴다
+                reported(holdings, true),
+                reported(holdings, false),
                 viewItems
         );
+    }
+
+    /** 응답 요약의 평가금액(통화별). 요약이 비어 있으면 null */
+    private static BigDecimal reported(TossHoldings holdings, boolean krw) {
+        if (holdings.marketValue() == null || holdings.marketValue().amount() == null) {
+            return null;
+        }
+        return krw ? holdings.marketValue().amount().krw() : holdings.marketValue().amount().usd();
     }
 
     /** 한 종목의 원화 환산값들을 미리 계산해서 담아두는 임시 그릇 */

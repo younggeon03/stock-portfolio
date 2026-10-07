@@ -50,7 +50,25 @@ public class UnifiedPortfolioService {
      *                 증권사 API 는 이 값을 무시한다(키가 곧 신분이므로).
      */
     public UnifiedPortfolioView load(String scope, String ownerKey) {
+        return loadWithStatements(scope, ownerKey).view();
+    }
+
+    /**
+     * 화면용 합산 결과 + 증권사별 원래 응답(합계 포함). 장 마감 스냅샷이 대사에 쓴다.
+     * 증권사를 한 번만 부르고 둘 다 만든다.
+     *
+     * @param statements 조회에 성공한 증권사의 응답
+     * @param failures   설정은 됐는데 조회에 실패한 증권사와 그 이유. 비어 있어야 스냅샷을 믿을 수 있다
+     */
+    public record Loaded(UnifiedPortfolioView view,
+                         Map<Broker, com.mystock.portfolio.brokerage.BrokerageStatement> statements,
+                         Map<Broker, String> failures) {
+    }
+
+    public Loaded loadWithStatements(String scope, String ownerKey) {
         String normalizedScope = normalizeScope(scope);
+        Map<Broker, com.mystock.portfolio.brokerage.BrokerageStatement> statements = new LinkedHashMap<>();
+        Map<Broker, String> failures = new LinkedHashMap<>();
 
         List<BrokerageHolding> allHoldings = new ArrayList<>();
         List<UnifiedPortfolioView.BrokerSummary> brokerSummaries = new ArrayList<>();
@@ -72,7 +90,9 @@ public class UnifiedPortfolioService {
             }
 
             try {
-                List<BrokerageHolding> holdings = client.holdings(ownerKey);
+                com.mystock.portfolio.brokerage.BrokerageStatement statement = client.statement(ownerKey);
+                statements.put(broker, statement);
+                List<BrokerageHolding> holdings = statement.holdings();
 
                 // 직접 입력분이 하나도 없으면 요약 칩에 "0원" 으로 끼어들 필요가 없다
                 if (holdings.isEmpty() && broker == Broker.MANUAL) {
@@ -88,6 +108,7 @@ public class UnifiedPortfolioService {
 
             } catch (Exception e) {
                 log.warn("{} 보유종목 조회 실패: {}", broker, e.getMessage());
+                failures.put(broker, e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
                 brokerSummaries.add(summaryOf(broker, true, BigDecimal.ZERO, 0, e.getMessage()));
             }
         }
@@ -118,7 +139,7 @@ public class UnifiedPortfolioService {
                         percentOf(b.valueKrw(), totalValue), b.itemCount(), b.error()))
                 .toList();
 
-        return new UnifiedPortfolioView(
+        UnifiedPortfolioView view = new UnifiedPortfolioView(
                 normalizedScope,
                 totalValue,
                 totalPurchase,
@@ -126,6 +147,7 @@ public class UnifiedPortfolioService {
                 percentOf(totalValue.subtract(totalPurchase), totalPurchase),
                 brokersWithWeight,
                 items);
+        return new Loaded(view, statements, failures);
     }
 
     private String normalizeScope(String scope) {

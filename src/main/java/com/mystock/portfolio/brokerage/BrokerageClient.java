@@ -33,4 +33,12 @@ public interface BrokerageClient {
      *                 (키 주인의 계좌만 조회되므로 구분할 필요가 없다)
      */
     List<BrokerageHolding> holdings(String ownerKey);
+
+    /**
+     * 보유 종목과 증권사가 밝힌 계좌 합계를 한 번의 조회로. 대사에 쓴다.
+     * 합계를 주지 않는 곳은 기본 구현(합계 없음)을 그대로 쓴다.
+     */
+    default BrokerageStatement statement(String ownerKey) {
+        return BrokerageStatement.withoutTotals(holdings(ownerKey));
+    }
 }
