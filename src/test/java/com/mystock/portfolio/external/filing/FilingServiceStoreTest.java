@@ -94,6 +94,41 @@ class FilingServiceStoreTest {
     }
 
     @Test
+    void 야간_배치는_하루_안의_저장본이_있어도_다시_받아_저장한다() throws Exception {
+        StoredFinancials fresh = row(LocalDateTime.now().minusHours(3));
+        when(store.findById("DEMO")).thenReturn(Optional.of(fresh));
+        when(edgar.find(eq("DEMO"), eq(BigDecimal.TEN), isNull())).thenReturn(Optional.of(demo()));
+        when(toss.closesOnOrBefore(eq("DEMO"), anyList())).thenReturn(Map.of());
+
+        assertThat(service.refresh("DEMO", "US", false, BigDecimal.TEN)).isEqualTo(FilingService.Prefetch.REFRESHED);
+        verify(store).save(fresh);
+        assertThat(fresh.getFetchedAt()).isAfter(LocalDateTime.now().minusMinutes(1));
+    }
+
+    @Test
+    void 야간_배치가_못_받으면_저장본을_건드리지_않는다() throws Exception {
+        when(edgar.find(eq("DEMO"), any(), isNull())).thenThrow(new IllegalStateException("SEC 503"));
+        when(store.existsById("DEMO")).thenReturn(true);
+
+        assertThat(service.refresh("DEMO", "US", false, null)).isEqualTo(FilingService.Prefetch.KEPT_OLD);
+        verify(store, never()).save(any());
+    }
+
+    @Test
+    void 야간_배치_공시처에도_저장본에도_없으면_없음() {
+        when(dart.find(eq("000001"), any(), isNull())).thenReturn(Optional.empty());
+        when(store.existsById("000001")).thenReturn(false);
+
+        assertThat(service.refresh("000001", "KR", false, BigDecimal.TEN)).isEqualTo(FilingService.Prefetch.NOT_FOUND);
+    }
+
+    @Test
+    void 야간_배치도_펀드는_부르지_않는다() {
+        assertThat(service.refresh("SPY", "US", true, null)).isEqualTo(FilingService.Prefetch.NOT_APPLICABLE);
+        verify(edgar, never()).find(any(), any(), any());
+    }
+
+    @Test
     void 펀드는_부르지_않는다() {
         assertThat(service.find("SPY", "US", true, null, BigDecimal.ONE)).isEmpty();
         verify(store, never()).findById(any());

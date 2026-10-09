@@ -7,6 +7,7 @@ import com.mystock.portfolio.external.filing.FilingService;
 import com.mystock.portfolio.external.toss.TossMarketDataService;
 import com.mystock.portfolio.external.toss.dto.TossPrice;
 import com.mystock.portfolio.external.toss.dto.TossStockInfo;
+import com.mystock.portfolio.service.filing.FilingPrefetchService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,14 +40,17 @@ public class FinancialsController {
     private final DartFinancialService dartFinancialService;
     private final EdgarFinancialService edgarFinancialService;
     private final TossMarketDataService marketDataService;
+    private final FilingPrefetchService prefetchService;
 
     public FinancialsController(FilingService filingService, DartFinancialService dartFinancialService,
                                 EdgarFinancialService edgarFinancialService,
-                                TossMarketDataService marketDataService) {
+                                TossMarketDataService marketDataService,
+                                FilingPrefetchService prefetchService) {
         this.filingService = filingService;
         this.dartFinancialService = dartFinancialService;
         this.edgarFinancialService = edgarFinancialService;
         this.marketDataService = marketDataService;
+        this.prefetchService = prefetchService;
     }
 
     /**
@@ -81,5 +85,14 @@ public class FinancialsController {
         return Map.of(
                 "dartListed", dartFinancialService.refreshCorpCodes(),
                 "secTickers", edgarFinancialService.refreshCiks());
+    }
+
+    /**
+     * 야간 배치(매일 06:00)를 지금 한 번 돌린다. 보유·분석해 둔 종목의 공시 재무를 다시 받아 저장한다.
+     * 종목 수에 따라 수십 초~몇 분 걸리고 끝나야 응답한다. 0원
+     */
+    @PostMapping("/prefetch")
+    public FilingPrefetchService.Result prefetch() {
+        return prefetchService.run();
     }
 }
