@@ -155,6 +155,34 @@ main { min-width: 0; padding-block: var(--s-6) var(--s-7); }
 .doc blockquote.try { border: 1px solid var(--warn-line); border-left: 3px solid var(--warn-ink); background: var(--warn-bg); border-radius: 0 var(--r-1) var(--r-1) 0; }
 .doc blockquote.try .label { font-weight: 700; color: var(--warn-ink); }
 
+/* 그림: 마크다운의 글자 상자 그림을 대신하는 SVG. 색은 토큰만 쓴다(빨강·파랑 없음) */
+.fig { margin: 0 0 var(--s-5); padding: var(--s-4); background: var(--bg-raised); border: 1px solid var(--rule); border-radius: var(--r-2); }
+.fig svg { display: block; width: 100%; height: auto; color: var(--ink-2); }
+.fig figcaption { margin-top: var(--s-3); font-size: var(--read-sm); color: var(--ink-3); line-height: 1.6; }
+.fig .d-node rect { fill: var(--bg); stroke: var(--ink-3); stroke-width: 1.2; }
+.fig .d-node.main rect { stroke: var(--ink); stroke-width: 2; }
+.fig .d-node.ext rect { fill: var(--bg-sunken); stroke: var(--rule-2); }
+.fig .d-t { font: 600 14px var(--font-sans); fill: var(--ink); }
+.fig .d-s { font: 400 12px var(--font-sans); fill: var(--ink-3); }
+.fig .d-l { font: 400 12px var(--font-mono); fill: var(--ink-2); paint-order: stroke; stroke: var(--bg-raised); stroke-width: 4px; }
+.fig .d-e { fill: none; stroke: currentColor; stroke-width: 1.4; }
+.fig .d-e.strong { stroke: var(--ink); stroke-width: 2.2; }
+.fig .d-e.dash { stroke-dasharray: 5 4; }
+.fig .d-zone { fill: none; stroke: var(--rule-2); stroke-width: 1.4; stroke-dasharray: 7 5; }
+.fig .d-zone2 { fill: var(--bg-sunken); fill-opacity: 0.5; stroke: var(--rule); stroke-dasharray: 2 4; }
+.fig .d-zl { font: 600 12px var(--font-sans); fill: var(--ink-3); letter-spacing: 0.04em; }
+.fig .d-r { font: 400 12px var(--font-mono); fill: var(--ink-2); }
+.fig .d-n { font: 400 12px var(--font-sans); fill: var(--ink-3); }
+.fig .d-sep { stroke: var(--rule-2); stroke-width: 1; }
+.fig .d-node.tbl rect { fill: var(--bg); }
+/* 장 첫머리 지도: 이 장의 부분만 진하게, 나머지는 흐리게 */
+.fig.map .dim { opacity: 0.3; }
+.fig.map .hl rect { stroke: var(--ink); stroke-width: 2.4; fill: var(--bg); }
+.fig.map .hl .d-t { font-weight: 700; }
+.fig details.fig-text { margin-top: var(--s-3); }
+.fig details.fig-text summary { cursor: pointer; font-size: var(--read-sm); color: var(--ink-3); }
+.fig details.fig-text pre { margin: var(--s-2) 0 0; }
+
 /* 용어 풍선 */
 .pop {
   position: absolute; z-index: 10; max-width: min(360px, calc(100vw - 32px));
@@ -194,6 +222,8 @@ main { min-width: 0; padding-block: var(--s-6) var(--s-7); }
 // 빌드 스크립트(build-html.js)가 아래 두 값을 채운다. 원본은 저장소의 docs/기술노트.md 하나다
 const NOTE_MD = /*__NOTE_JSON__*/"";
 const NOTE_META = /*__META_JSON__*/{};
+// html/diagrams/*.svg. 마크다운의 <!-- diagram: 이름 | 설명 --> 표시 바로 뒤의 글자 그림을 이것으로 바꾼다
+const DIAGRAMS = /*__DIAGRAMS_JSON__*/{};
 
 const REPO_DOCS = "https://github.com/younggeon03/stock-portfolio/blob/main/docs/";
 const doc = document.getElementById("doc");
@@ -223,9 +253,55 @@ function render() {
     const m = (c.className || "").match(/language-(\w+)/);
     if (m) c.parentElement.classList.add("lang-" + m[1]);
   });
+  placeDiagrams();
   styleCallouts();
   fixLinks();
   markGlossTables();
+}
+
+// <!-- diagram: 이름 | 설명 --> 표시를 찾아 바로 뒤의 글자 그림(pre)을 SVG 그림으로 바꾼다.
+// 글자 그림은 지우지 않고 "글로 그린 그림 보기" 로 접어 둔다(원본 마크다운과 같은 내용인지 대조할 수 있게)
+let figCount = 0;
+function placeDiagrams() {
+  const walker = document.createTreeWalker(doc, NodeFilter.SHOW_COMMENT);
+  const marks = [];
+  while (walker.nextNode()) marks.push(walker.currentNode);
+  for (const c of marks) {
+    // diagram: 이름 | 설명   또는   diagram: map@web,service | 설명 (지도에서 그 부분만 진하게)
+    const m = c.data.trim().match(/^diagram:\s*([\w-]+)(?:@([\w,-]+))?\s*(?:\|\s*([\s\S]+))?$/);
+    if (!m || !DIAGRAMS[m[1]]) continue;
+    const parts = m[2] ? m[2].split(",") : null;
+    const caption = m[3];
+    let pre = c.nextSibling;
+    while (pre && pre.nodeType !== 1) pre = pre.nextSibling;
+    const fig = document.createElement("figure");
+    fig.className = "fig";
+    // 같은 그림을 두 번 쓰면 화살표 id 가 겹친다. 그림마다 id 를 새로 붙인다
+    const uid = "f" + (++figCount);
+    fig.innerHTML = DIAGRAMS[m[1]].replace(/arr-([\w-]+)/g, `arr-$1-${uid}`);
+    const svg = fig.querySelector("svg");
+    if (parts) {
+      fig.classList.add("map");
+      svg.querySelectorAll("[data-part]").forEach(g =>
+        g.classList.add(parts.includes(g.dataset.part) ? "hl" : "dim"));
+    }
+    if (caption) {
+      const cap = document.createElement("figcaption");
+      cap.textContent = caption.trim();
+      fig.append(cap);
+      if (svg) svg.setAttribute("aria-label", caption.trim());
+    }
+    c.parentNode.insertBefore(fig, c);
+    c.remove();
+    if (pre && pre.tagName === "PRE") {
+      const det = document.createElement("details");
+      det.className = "fig-text";
+      const s = document.createElement("summary");
+      s.textContent = "글로 그린 그림 보기";
+      det.append(s, pre);
+      fig.append(det);
+    }
+  }
 }
 
 // 인용 상자를 첫 굵은 글자로 가른다: 이 장에서 배울 것 / 먼저 알아둘 말 / 직접 해보기
