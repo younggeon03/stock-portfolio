@@ -25,7 +25,9 @@
   --read: 16px;
   --read-sm: 13.5px;
   --lead: 1.85;
-  --measure: 680px;
+  --measure: 780px;
+  --side: 420px;
+  --sec-gap: 40px;
   --r-1: 6px; --r-2: 10px;
   --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px; --s-6: 32px; --s-7: 48px;
 }
@@ -36,13 +38,15 @@ body {
   background: var(--bg); color: var(--ink-2);
   font: 400 var(--read)/var(--lead) var(--font-sans);
   word-break: keep-all; overflow-wrap: anywhere;
-  padding-inline: 16px;
+  padding-inline: 28px;
 }
+/* 세 단(2026-10-09 후보 C): 왼쪽 목차 · 가운데 본문 · 오른쪽 "이 단락의 코드" 칸.
+   오른쪽 칸은 단락(###)마다 따로 있고, 그 단락을 읽는 동안 따라 내려온다(.sec) */
 .shell {
-  max-width: 1180px; margin: 0 auto;
-  display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: var(--s-7);
+  max-width: 1680px; margin: 0 auto;
+  display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 44px;
 }
-@media (max-width: 960px) { .shell { grid-template-columns: minmax(0, 1fr); gap: var(--s-4); } }
+@media (max-width: 960px) { .shell { grid-template-columns: minmax(0, 1fr); gap: var(--s-4); } body { padding-inline: 16px; } }
 
 /* ── 왼쪽: 목차와 용어 찾기 ── */
 .side {
@@ -96,7 +100,38 @@ details.toc-fold > summary { display: none; }
 
 /* ── 오른쪽: 읽는 면 ── */
 main { min-width: 0; padding-block: var(--s-6) var(--s-7); }
-.doc { max-width: var(--measure); }
+.doc { max-width: none; }
+/* 단락 밖(지도·안내·요약 상자)은 본문 폭. 장 제목의 굵은 선만 오른쪽 칸까지 넓게 */
+.doc > * { max-width: var(--measure); }
+.doc > h2 { max-width: calc(var(--measure) + var(--side) + var(--sec-gap)); }
+.doc > .sec { max-width: none; }
+.sec { display: grid; grid-template-columns: minmax(0, var(--measure)) var(--side); gap: var(--sec-gap); align-items: start; }
+.sec-body { min-width: 0; }
+.sec-body > :first-child { margin-top: var(--s-6); }
+.sec-side { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; margin-top: var(--s-6); display: grid; gap: var(--s-4); padding-bottom: var(--s-4); }
+.sec-side:empty { display: none; }
+@media (max-width: 1280px) {
+  .sec { grid-template-columns: minmax(0, 1fr); }
+  .sec-side { position: static; max-height: none; margin-top: 0; margin-bottom: var(--s-5); }
+  .doc > h2 { max-width: var(--measure); }
+}
+/* 오른쪽 칸의 자료 한 장: 파일 경로(원본 링크) · 코드 · 왜 보는지 */
+.ref { background: var(--bg-raised); border: 1px solid var(--rule); border-radius: var(--r-2); overflow: hidden; }
+.ref-h { display: flex; justify-content: space-between; gap: var(--s-2); padding: 8px 12px; background: var(--bg-sunken); font: 400 12px/1.4 var(--font-mono); color: var(--ink-2); }
+.ref-h a { color: var(--ink-2); text-decoration: none; overflow-wrap: anywhere; }
+.ref-h a:hover { color: var(--ink); text-decoration: underline; }
+.ref-h .kind { flex: none; color: var(--ink-3); font-family: var(--font-sans); }
+.doc .ref pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; border: 0; border-radius: 0; padding: 12px; background: var(--bg-raised); max-height: 460px; overflow: auto; }
+.doc .ref pre code { white-space: pre-wrap; font-size: 12.5px; line-height: 1.55; }
+.doc .ref .fig { margin: 0; border: 0; border-radius: 0; padding: 12px; }
+.ref .fig figcaption, .ref .fig details { display: none; }
+.ref-n { margin: 0; padding: 10px 12px 12px; font-size: 13.5px; line-height: 1.65; color: var(--ink-2); border-top: 1px solid var(--rule); }
+/* 문법 강조: 색은 쓰지 않는다(빨강·파랑은 등락 전용). 굵기와 회색 단계로만 */
+.hljs-keyword, .hljs-built_in, .hljs-type, .hljs-selector-tag, .hljs-section, .hljs-meta .hljs-keyword { color: var(--ink); font-weight: 700; }
+.hljs-title, .hljs-title.function_, .hljs-attr, .hljs-name, .hljs-property { color: var(--ink); }
+.hljs-string, .hljs-number, .hljs-literal, .hljs-symbol { color: var(--ink-2); }
+.hljs-comment, .hljs-quote, .hljs-meta { color: var(--ink-3); font-style: italic; }
+.hljs-annotation, .hljs-meta.hljs-keyword, .hljs-doctag { color: var(--ink-2); font-weight: 600; }
 .doc > :first-child { margin-top: 0; }
 .doc h1 { font: 700 34px/1.3 var(--font-serif); color: var(--ink); letter-spacing: -0.02em; margin: 0 0 var(--s-4); text-wrap: balance; }
 .doc h2 {
@@ -218,12 +253,16 @@ main { min-width: 0; padding-block: var(--s-6) var(--s-7); }
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/dockerfile.min.js"></script>
 <script>
 // 빌드 스크립트(build-html.js)가 아래 두 값을 채운다. 원본은 저장소의 docs/기술노트.md 하나다
 const NOTE_MD = /*__NOTE_JSON__*/"";
 const NOTE_META = /*__META_JSON__*/{};
 // html/diagrams/*.svg. 마크다운의 <!-- diagram: 이름 | 설명 --> 표시 바로 뒤의 글자 그림을 이것으로 바꾼다
 const DIAGRAMS = /*__DIAGRAMS_JSON__*/{};
+// html/sides.js 에서 빌드 때 잘라 온 실제 코드. 키는 단락 번호("4.1") 또는 장 번호("7")
+const SIDES = /*__SIDES_JSON__*/{};
 
 const REPO_DOCS = "https://github.com/younggeon03/stock-portfolio/blob/main/docs/";
 const doc = document.getElementById("doc");
@@ -256,11 +295,81 @@ function render() {
   placeDiagrams();
   styleCallouts();
   fixLinks();
+  buildSections();
   markGlossTables();
 }
 
 // <!-- diagram: 이름 | 설명 --> 표시를 찾아 바로 뒤의 글자 그림(pre)을 SVG 그림으로 바꾼다.
 // 글자 그림은 지우지 않고 "글로 그린 그림 보기" 로 접어 둔다(원본 마크다운과 같은 내용인지 대조할 수 있게)
+// 단락(###)마다 "본문 | 오른쪽 칸" 한 줄로 묶는다. 단락이 없는 장은 장 전체를 묶는다(SIDES 에 장 번호가 있을 때)
+function buildSections() {
+  const kids = [...doc.children];
+  let cur = null;
+  let chapterStart = null, chapterKey = null;
+  const open = (key, startEl) => {
+    const sec = document.createElement("div"); sec.className = "sec";
+    const body = document.createElement("div"); body.className = "sec-body";
+    const side = document.createElement("aside"); side.className = "sec-side";
+    side.setAttribute("aria-label", "이 단락의 코드와 그림");
+    sec.append(body, side);
+    startEl.before(sec);
+    fillSide(side, key);
+    return body;
+  };
+  for (const el of kids) {
+    if (el.tagName === "H2") {
+      cur = null;
+      const m = el.textContent.match(/^(\d+)\.\s/);
+      // 단락이 없고 장 단위 자료가 있는 장: 요약 상자 다음부터 장 끝까지를 한 단락으로
+      if (m && SIDES[m[1]] && !hasH3Until(el)) {
+        let start = el.nextElementSibling;
+        while (start && (start.classList.contains("map") || start.matches("blockquote.lede") || /^지도에서 보면/.test(start.textContent))) start = start.nextElementSibling;
+        if (start && start.tagName !== "H2") { chapterStart = start; chapterKey = m[1]; }
+      }
+      continue;
+    }
+    if (el === chapterStart) cur = open(chapterKey, el);
+    if (el.tagName === "H3") {
+      const m = el.textContent.match(/^(\d+\.\d+)\s/);
+      cur = open(m ? m[1] : "", el);
+    }
+    if (cur) cur.append(el);
+  }
+}
+function hasH3Until(h2) {
+  for (let el = h2.nextElementSibling; el && el.tagName !== "H2"; el = el.nextElementSibling) if (el.tagName === "H3") return true;
+  return false;
+}
+function fillSide(side, key) {
+  for (const it of SIDES[key] || []) {
+    const card = document.createElement("div"); card.className = "ref";
+    const head = document.createElement("div"); head.className = "ref-h";
+    if (it.diagram) {
+      const t = document.createElement("span"); t.textContent = "그림";
+      head.append(t);
+      const fig = document.createElement("figure"); fig.className = "fig";
+      fig.innerHTML = (DIAGRAMS[it.diagram] || "").replace(/arr-([\w-]+)/g, `arr-$1-s${++figCount}`);
+      card.append(head, fig);
+    } else {
+      const a = document.createElement(it.href ? "a" : "span");
+      a.textContent = it.title;
+      if (it.href) { a.href = it.href; a.target = "_blank"; a.rel = "noopener"; }
+      const kind = document.createElement("span"); kind.className = "kind"; kind.textContent = it.href ? "실제 코드" : "예시";
+      head.append(a, kind);
+      const pre = document.createElement("pre"); const code = document.createElement("code");
+      code.textContent = it.code;
+      if (it.lang) code.className = "language-" + it.lang;
+      pre.append(code);
+      if (window.hljs && it.lang && hljs.getLanguage(it.lang)) {
+        try { hljs.highlightElement(code); } catch (e) { /* 강조가 실패해도 글자는 그대로 보인다 */ }
+      }
+      card.append(head, pre);
+    }
+    if (it.note) { const n = document.createElement("p"); n.className = "ref-n"; n.textContent = it.note; card.append(n); }
+    side.append(card);
+  }
+}
+
 let figCount = 0;
 function placeDiagrams() {
   const walker = document.createTreeWalker(doc, NodeFilter.SHOW_COMMENT);
