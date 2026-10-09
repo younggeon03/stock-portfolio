@@ -1,0 +1,425 @@
+<title>기술노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Nanum+Gothic+Coding:wght@400;700&family=Noto+Serif+KR:wght@600;700&display=swap">
+<style>
+/* 레이아웃: 왼쪽에 고정 목차·용어 찾기, 오른쪽에 읽는 면(630px 폭). 좁은 화면에서는 목차가 위로 접힌다.
+   색·간격은 저장소 static/public/tokens.css 의 "브리핑" 토큰을 그대로 옮겼다.
+   화면은 밝은 종이색 하나뿐이다(결정기록 011). 빨강·파랑은 등락 전용이라 여기서는 쓰지 않는다. 강조는 검정. */
+:root {
+  color-scheme: light;
+  --bg: #f6f5f1;
+  --bg-sunken: #ecebe5;
+  --bg-raised: #fbfaf7;
+  --ink: #1a1c20;
+  --ink-2: #2b2e33;
+  --ink-3: #5d6168;
+  --rule: #e3e0d7;
+  --rule-2: #cfcabd;
+  --warn-bg: #fff8e8; --warn-line: #f3dfae; --warn-ink: #7a5600;
+
+  --font-serif: "Noto Serif KR", "Nanum Myeongjo", "Apple SD Gothic Neo", serif;
+  --font-sans: "IBM Plex Sans KR", "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "Nanum Gothic Coding", "D2Coding", ui-monospace, "Consolas", monospace;
+
+  --read: 16px;
+  --read-sm: 13.5px;
+  --lead: 1.85;
+  --measure: 680px;
+  --r-1: 6px; --r-2: 10px;
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px; --s-6: 32px; --s-7: 48px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  background: var(--bg); color: var(--ink-2);
+  font: 400 var(--read)/var(--lead) var(--font-sans);
+  word-break: keep-all; overflow-wrap: anywhere;
+  padding-inline: 16px;
+}
+.shell {
+  max-width: 1180px; margin: 0 auto;
+  display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: var(--s-7);
+}
+@media (max-width: 960px) { .shell { grid-template-columns: minmax(0, 1fr); gap: var(--s-4); } }
+
+/* ── 왼쪽: 목차와 용어 찾기 ── */
+.side {
+  position: sticky; top: env(safe-area-inset-top, 0px);
+  align-self: start; max-height: 100vh; overflow-y: auto;
+  padding-block: var(--s-6) var(--s-6);
+  font-size: 14px; line-height: 1.5;
+}
+@media (max-width: 960px) {
+  .side { position: static; max-height: none; padding-block: var(--s-4) 0; }
+}
+.brand { display: grid; gap: 2px; margin-bottom: var(--s-5); }
+.brand b { font: 700 20px/1.3 var(--font-serif); color: var(--ink); letter-spacing: -0.01em; }
+.brand span { color: var(--ink-3); font-size: 12.5px; }
+.side h2 {
+  font: 600 11.5px/1 var(--font-sans); letter-spacing: 0.08em; color: var(--ink-3);
+  margin: var(--s-5) 0 var(--s-2);
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+.toc a {
+  display: grid; grid-template-columns: 2.2em 1fr; gap: 2px;
+  color: var(--ink-2); text-decoration: none; padding: 5px 8px; border-radius: var(--r-1);
+}
+.toc a .n { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--bg-sunken); }
+.toc a[aria-current="true"] { background: var(--ink); color: var(--bg); }
+.toc a[aria-current="true"] .n { color: var(--rule-2); }
+.toc .sub { padding-left: 2.2em; display: none; }
+.toc li.open > .sub { display: grid; }
+.toc .sub a { grid-template-columns: 1fr; font-size: 13px; color: var(--ink-3); padding: 3px 8px; }
+.toc .sub a[aria-current="true"] { background: var(--bg-sunken); color: var(--ink); font-weight: 600; }
+details.toc-fold > summary { display: none; }
+@media (max-width: 960px) {
+  details.toc-fold > summary {
+    display: block; cursor: pointer; padding: 10px 12px; border: 1px solid var(--rule-2);
+    border-radius: var(--r-2); background: var(--bg-raised); font-weight: 600; color: var(--ink);
+  }
+  details.toc-fold[open] > summary { margin-bottom: var(--s-3); }
+}
+
+.gloss-search {
+  width: 100%; font: inherit; font-size: 14px; padding: 8px 10px; color: var(--ink);
+  background: var(--bg-raised); border: 1px solid var(--rule-2); border-radius: var(--r-1);
+}
+.gloss-search:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.gloss-hits { list-style: none; margin: var(--s-2) 0 0; padding: 0; display: grid; gap: var(--s-2); }
+.gloss-hits li { padding: var(--s-2) var(--s-3); background: var(--bg-raised); border: 1px solid var(--rule); border-radius: var(--r-1); }
+.gloss-hits b { color: var(--ink); display: block; }
+.gloss-hits span { color: var(--ink-2); font-size: 13px; }
+.gloss-hits .none { color: var(--ink-3); background: none; border: 0; padding: 0; }
+
+/* ── 오른쪽: 읽는 면 ── */
+main { min-width: 0; padding-block: var(--s-6) var(--s-7); }
+.doc { max-width: var(--measure); }
+.doc > :first-child { margin-top: 0; }
+.doc h1 { font: 700 34px/1.3 var(--font-serif); color: var(--ink); letter-spacing: -0.02em; margin: 0 0 var(--s-4); text-wrap: balance; }
+.doc h2 {
+  font: 700 26px/1.35 var(--font-serif); color: var(--ink); letter-spacing: -0.015em;
+  margin: var(--s-7) 0 var(--s-4); padding-top: var(--s-5); border-top: 2px solid var(--ink);
+  text-wrap: balance; scroll-margin-top: var(--s-4);
+}
+.doc h3 { font: 700 19px/1.45 var(--font-sans); color: var(--ink); margin: var(--s-6) 0 var(--s-3); text-wrap: balance; scroll-margin-top: var(--s-4); }
+.doc h4 { font: 600 16px/1.5 var(--font-sans); color: var(--ink); margin: var(--s-5) 0 var(--s-2); }
+.doc p, .doc ul, .doc ol { margin: 0 0 var(--s-4); }
+.doc ul, .doc ol { padding-left: 1.3em; }
+.doc li + li { margin-top: 6px; }
+.doc strong { color: var(--ink); font-weight: 700; }
+.doc a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--rule-2); text-underline-offset: 3px; }
+.doc a:hover { text-decoration-color: var(--ink); }
+.doc a:focus-visible, .toc a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 3px; }
+.doc hr { border: 0; height: 0; margin: var(--s-6) 0; }
+
+.doc code {
+  font: 400 0.9em/1 var(--font-mono); background: var(--bg-sunken); color: var(--ink);
+  padding: 2px 5px; border-radius: 4px;
+}
+.doc pre {
+  margin: 0 0 var(--s-5); padding: var(--s-4); overflow-x: auto;
+  background: var(--bg-raised); border: 1px solid var(--rule); border-radius: var(--r-2);
+}
+/* 상자 그림은 한글이 정확히 두 칸이어야 선이 맞는다. 나눔고딕코딩이 그렇게 만들어져 있다 */
+.doc pre code { background: none; padding: 0; font: 400 13.5px/1.6 var(--font-mono); color: var(--ink-2); white-space: pre; }
+.doc pre.lang-java { background: var(--bg-sunken); border-color: var(--bg-sunken); }
+
+.tbl { overflow-x: auto; margin: 0 0 var(--s-5); border: 1px solid var(--rule); border-radius: var(--r-2); background: var(--bg-raised); }
+.doc table { border-collapse: collapse; width: 100%; font-size: 14.5px; line-height: 1.6; }
+.doc th { text-align: left; font-weight: 600; color: var(--ink-3); font-size: 12.5px; letter-spacing: 0.02em; background: var(--bg-sunken); }
+.doc th, .doc td { padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.doc tr:last-child td { border-bottom: 0; }
+.doc td:first-child { min-width: 7.5em; }
+/* 용어집 표: 첫 칸(용어)을 굵고 좁게 */
+.gloss-table td:first-child { width: 26%; }
+.gloss-table td:last-child { color: var(--ink-3); font-size: 13.5px; }
+
+/* 인용 상자: 표시마다 생김새를 달리한다 */
+.doc blockquote { margin: 0 0 var(--s-5); padding: var(--s-3) var(--s-4); border-left: 3px solid var(--rule-2); color: var(--ink-2); }
+.doc blockquote p:last-child { margin-bottom: 0; }
+.doc blockquote.lede {
+  border: 0; padding: var(--s-4) var(--s-5); background: var(--bg-raised);
+  border-top: 1px solid var(--rule-2); border-bottom: 1px solid var(--rule-2); font-size: 15.5px;
+}
+.doc blockquote.lede .label { display: block; font: 600 11.5px/1.4 var(--font-sans); letter-spacing: 0.08em; color: var(--ink-3); margin-bottom: 4px; }
+.doc blockquote.lede p + p { margin-top: var(--s-3); padding-top: var(--s-3); border-top: 1px dashed var(--rule); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.chips a {
+  text-decoration: none; font-size: 13.5px; padding: 3px 10px; border: 1px solid var(--rule-2);
+  border-radius: 999px; background: var(--bg); color: var(--ink);
+}
+.chips a:hover { border-color: var(--ink); }
+.doc blockquote.try { border: 1px solid var(--warn-line); border-left: 3px solid var(--warn-ink); background: var(--warn-bg); border-radius: 0 var(--r-1) var(--r-1) 0; }
+.doc blockquote.try .label { font-weight: 700; color: var(--warn-ink); }
+
+/* 용어 풍선 */
+.pop {
+  position: absolute; z-index: 10; max-width: min(360px, calc(100vw - 32px));
+  background: var(--ink); color: var(--bg); border-radius: var(--r-2);
+  padding: var(--s-3) var(--s-4); font-size: 13.5px; line-height: 1.6;
+  box-shadow: 0 12px 32px -8px rgba(15, 18, 22, 0.35);
+}
+.pop b { color: #fff; display: block; }
+.pop p { margin: 0 0 var(--s-2); }
+.pop p:last-child { margin-bottom: 0; }
+.pop .where { color: var(--rule-2); font-size: 12.5px; }
+
+.meta { color: var(--ink-3); font-size: var(--read-sm); margin-top: var(--s-7); padding-top: var(--s-4); border-top: 1px solid var(--rule); }
+.loading { color: var(--ink-3); }
+</style>
+
+<div class="shell">
+  <aside class="side" aria-label="목차와 용어 찾기">
+    <div class="brand"><b>기술노트</b><span>stock-portfolio 로 배우는 실무 기술</span></div>
+    <details class="toc-fold" id="toc-fold" open>
+      <summary>목차</summary>
+      <nav class="toc" id="toc" aria-label="목차"></nav>
+    </details>
+    <h2>용어 찾기</h2>
+    <label for="gloss-q" class="sr" style="position:absolute;left:-9999px">용어 찾기</label>
+    <input id="gloss-q" class="gloss-search" type="search" placeholder="예: 프록시, 멱등, 429" autocomplete="off">
+    <ul class="gloss-hits" id="gloss-hits" aria-live="polite"></ul>
+  </aside>
+  <main>
+    <article class="doc" id="doc"><p class="loading">노트를 펼치는 중입니다…</p></article>
+    <p class="meta" id="meta"></p>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script>
+// 빌드 스크립트(build-html.js)가 아래 두 값을 채운다. 원본은 저장소의 docs/기술노트.md 하나다
+const NOTE_MD = /*__NOTE_JSON__*/"";
+const NOTE_META = /*__META_JSON__*/{};
+
+const REPO_DOCS = "https://github.com/younggeon03/stock-portfolio/blob/main/docs/";
+const doc = document.getElementById("doc");
+
+// GitHub 의 앵커 규칙을 흉내 낸다(linkcheck.js 와 같은 규칙). 노트 안 링크가 그대로 맞아야 한다
+const slug = s => s.trim().toLowerCase().replace(/[`*]/g, "")
+  .replace(/[^\p{L}\p{N}\s_-]/gu, "").replace(/\s/g, "-");
+
+function render() {
+  doc.innerHTML = marked.parse(NOTE_MD, { gfm: true });
+  // 본문의 "목차" 절은 왼쪽 목차와 겹친다. 이 페이지에서만 숨긴다(원본 마크다운에는 필요하다)
+  const tocHead = [...doc.querySelectorAll("h2")].find(h => h.textContent.trim() === "목차");
+  if (tocHead && tocHead.nextElementSibling && tocHead.nextElementSibling.tagName === "OL") {
+    tocHead.nextElementSibling.hidden = true; tocHead.hidden = true;
+  }
+  const seen = {};
+  doc.querySelectorAll("h1,h2,h3,h4").forEach(h => {
+    let a = slug(h.textContent);
+    if (seen[a] !== undefined) { seen[a]++; a = a + "-" + seen[a]; } else seen[a] = 0;
+    h.id = a;
+  });
+  doc.querySelectorAll("table").forEach(t => {
+    const w = document.createElement("div"); w.className = "tbl";
+    t.replaceWith(w); w.appendChild(t);
+  });
+  doc.querySelectorAll("pre > code").forEach(c => {
+    const m = (c.className || "").match(/language-(\w+)/);
+    if (m) c.parentElement.classList.add("lang-" + m[1]);
+  });
+  styleCallouts();
+  fixLinks();
+  markGlossTables();
+}
+
+// 인용 상자를 첫 굵은 글자로 가른다: 이 장에서 배울 것 / 먼저 알아둘 말 / 직접 해보기
+function styleCallouts() {
+  doc.querySelectorAll("blockquote").forEach(q => {
+    const first = q.querySelector("p > strong:first-child");
+    const label = first ? first.textContent.trim() : "";
+    if (label === "이 장에서 배울 것") {
+      q.classList.add("lede");
+      q.querySelectorAll("p").forEach(p => {
+        const s = p.querySelector("strong:first-child");
+        if (!s) return;
+        const name = s.textContent.trim();
+        // "— " 로 이어지는 꼬리를 떼고 라벨로 세운다
+        s.remove();
+        p.innerHTML = p.innerHTML.replace(/^\s*—\s*/, "");
+        const lab = document.createElement("span"); lab.className = "label"; lab.textContent = name;
+        if (name === "먼저 알아둘 말") {
+          const chips = document.createElement("span"); chips.className = "chips";
+          p.querySelectorAll("a").forEach(a => chips.appendChild(a));
+          p.textContent = ""; p.append(lab, chips);
+        } else {
+          p.prepend(lab);
+        }
+      });
+    } else if (label === "직접 해보기") {
+      q.classList.add("try");
+      first.classList.add("label");
+    }
+  });
+}
+
+// 노트 안 앵커는 부드럽게 이동, 다른 문서(.md)는 GitHub 의 원본으로 새 탭
+function fixLinks() {
+  doc.querySelectorAll("a[href]").forEach(a => {
+    const href = a.getAttribute("href");
+    if (href.startsWith("#")) {
+      a.addEventListener("click", e => {
+        const el = document.getElementById(decodeURIComponent(href.slice(1)));
+        if (el) { e.preventDefault(); el.scrollIntoView(); el.setAttribute("tabindex", "-1"); el.focus({ preventScroll: true }); }
+      });
+    } else if (!/^https?:/.test(href)) {
+      const url = new URL(href, REPO_DOCS);
+      a.href = url.href; a.target = "_blank"; a.rel = "noopener";
+    } else {
+      a.target = "_blank"; a.rel = "noopener";
+    }
+  });
+}
+
+// ── 용어집: 0장의 표에서 읽어 와 찾기·풍선에 쓴다 ──
+const GLOSS = [];
+const norm = s => s.toLowerCase().replace(/[\s()·,.\-]/g, "");
+function markGlossTables() {
+  const h0 = [...doc.querySelectorAll("h2")].find(h => h.textContent.trim().startsWith("0."));
+  if (!h0) return;
+  for (let el = h0.nextElementSibling; el && el.tagName !== "H2"; el = el.nextElementSibling) {
+    const t = el.querySelector && el.querySelector("table");
+    if (!t) continue;
+    t.classList.add("gloss-table");
+    t.querySelectorAll("tbody tr").forEach(tr => {
+      const td = tr.querySelectorAll("td");
+      if (td.length < 2) return;
+      const term = td[0].textContent.trim();
+      const aliases = term.split(/[·(),]/).map(x => x.trim()).filter(Boolean);
+      GLOSS.push({ term, aliases, mean: td[1].textContent.trim(), where: td[2] ? td[2].textContent.trim() : "" });
+    });
+  }
+}
+function findTerms(text) {
+  const parts = text.split(/[·,]/).map(x => norm(x)).filter(x => x.length > 1);
+  const hits = [];
+  for (const g of GLOSS) {
+    const keys = [norm(g.term), ...g.aliases.map(norm)];
+    if (parts.some(p => keys.some(k => k === p || k.startsWith(p) || p.startsWith(k) && k.length > 1))) hits.push(g);
+  }
+  return hits.slice(0, 3);
+}
+
+// 찾기 상자
+const q = document.getElementById("gloss-q"), hitsEl = document.getElementById("gloss-hits");
+q.addEventListener("input", () => {
+  const v = norm(q.value);
+  hitsEl.textContent = "";
+  if (!v) return;
+  const found = GLOSS.filter(g => norm(g.term).includes(v) || norm(g.mean).includes(v)).slice(0, 6);
+  if (!found.length) {
+    const li = document.createElement("li"); li.className = "none";
+    li.textContent = "용어집에 없습니다. 본문 검색은 Ctrl+F 를 쓰세요."; hitsEl.append(li); return;
+  }
+  for (const g of found) {
+    const li = document.createElement("li");
+    const b = document.createElement("b"); b.textContent = g.term;
+    const s = document.createElement("span"); s.textContent = g.mean;
+    li.append(b, s); hitsEl.append(li);
+  }
+});
+
+// 풍선: "먼저 알아둘 말" 의 칩과 용어집으로 가는 링크에 마우스·초점을 대면 뜻을 보인다
+let pop = null;
+function showPop(a) {
+  hidePop();
+  const hits = findTerms(a.textContent);
+  if (!hits.length) return;
+  pop = document.createElement("div"); pop.className = "pop"; pop.setAttribute("role", "tooltip");
+  pop.id = "term-pop";
+  for (const g of hits) {
+    const p = document.createElement("p");
+    const b = document.createElement("b"); b.textContent = g.term;
+    p.append(b, document.createTextNode(g.mean));
+    if (g.where) { const w = document.createElement("span"); w.className = "where"; w.textContent = " — " + g.where; p.append(w); }
+    pop.append(p);
+  }
+  document.body.append(pop);
+  const r = a.getBoundingClientRect();
+  const left = Math.min(window.scrollX + r.left, window.scrollX + document.documentElement.clientWidth - pop.offsetWidth - 16);
+  pop.style.left = Math.max(16, left) + "px";
+  pop.style.top = (window.scrollY + r.bottom + 8) + "px";
+  a.setAttribute("aria-describedby", "term-pop");
+}
+function hidePop() { if (pop) { pop.remove(); pop = null; } }
+function wirePops() {
+  doc.querySelectorAll('a[href^="#0"]').forEach(a => {
+    a.addEventListener("mouseenter", () => showPop(a));
+    a.addEventListener("focus", () => showPop(a));
+    a.addEventListener("mouseleave", hidePop);
+    a.addEventListener("blur", hidePop);
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") hidePop(); });
+  window.addEventListener("scroll", hidePop, { passive: true });
+}
+
+// ── 목차: 장(h2)과 절(h3). 읽고 있는 장의 절만 펼친다 ──
+function buildToc() {
+  const toc = document.getElementById("toc");
+  const ol = document.createElement("ol");
+  let cur = null;
+  doc.querySelectorAll("h2, h3").forEach(h => {
+    const isCh = h.tagName === "H2";
+    const m = h.textContent.match(/^(\d+(?:\.\d+)?)\.?\s+(.*)$/);
+    if (isCh && !m) return;                    // 번호 없는 h2(목차 등)는 뺀다
+    if (!isCh && !cur) return;
+    const a = document.createElement("a");
+    a.href = "#" + h.id; a.dataset.target = h.id;
+    if (isCh) {
+      const n = document.createElement("span"); n.className = "n"; n.textContent = m[1];
+      const t = document.createElement("span"); t.textContent = m[2];
+      a.append(n, t);
+      cur = document.createElement("li"); cur.append(a);
+      const sub = document.createElement("ol"); sub.className = "sub"; cur.append(sub);
+      ol.append(cur);
+    } else {
+      a.textContent = h.textContent;
+      const li = document.createElement("li"); li.append(a);
+      cur.querySelector(".sub").append(li);
+    }
+    a.addEventListener("click", e => {
+      e.preventDefault(); h.scrollIntoView();
+      if (matchMedia("(max-width: 960px)").matches) document.getElementById("toc-fold").open = false;
+    });
+  });
+  toc.append(ol);
+
+  const links = [...toc.querySelectorAll("a")];
+  const heads = [...doc.querySelectorAll("h2[id], h3[id]")].filter(h => links.some(l => l.dataset.target === h.id));
+  const mark = () => {
+    let active = heads[0];
+    for (const h of heads) { if (h.getBoundingClientRect().top < 120) active = h; else break; }
+    if (!active) return;
+    links.forEach(l => l.removeAttribute("aria-current"));
+    toc.querySelectorAll("li.open").forEach(li => li.classList.remove("open"));
+    const link = links.find(l => l.dataset.target === active.id);
+    if (!link) return;
+    link.setAttribute("aria-current", "true");
+    const chapter = link.closest(".sub") ? link.closest(".sub").parentElement : link.parentElement;
+    chapter.classList.add("open");
+    const chLink = chapter.querySelector(":scope > a"); if (chLink) chLink.setAttribute("aria-current", "true");
+  };
+  window.addEventListener("scroll", () => requestAnimationFrame(mark), { passive: true });
+  mark();
+}
+
+function boot() {
+  if (typeof marked === "undefined") {
+    doc.innerHTML = "<p>글을 펼치는 도구(marked)를 불러오지 못했습니다. 새로고침하거나 저장소의 docs/기술노트.md 를 보세요.</p>";
+    return;
+  }
+  render();
+  buildToc();
+  wirePops();
+  if (matchMedia("(max-width: 960px)").matches) document.getElementById("toc-fold").open = false;
+  const m = document.getElementById("meta");
+  m.textContent = "원본: 저장소 docs/기술노트.md" + (NOTE_META.commit ? " · 커밋 " + NOTE_META.commit : "")
+    + (NOTE_META.built ? " · " + NOTE_META.built + " 에 만듦" : "") + ". 내용을 고치려면 원본을 고치고 이 페이지를 다시 만듭니다.";
+}
+boot();
+</script>
