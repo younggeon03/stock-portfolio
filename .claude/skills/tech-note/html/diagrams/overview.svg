@@ -1,0 +1,102 @@
+<svg viewBox="0 0 760 560" xmlns="http://www.w3.org/2000/svg" role="img">
+  <defs>
+    <marker id="arr-overview" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+
+  <!-- 서버 경계 -->
+  <rect class="d-zone" x="16" y="84" width="530" height="456" rx="14"/>
+  <text class="d-zl" x="32" y="106">서버 한 대 · docker compose</text>
+
+  <!-- 127.0.0.1 전용 구역 -->
+  <rect class="d-zone2" x="186" y="318" width="328" height="196" rx="10"/>
+  <text class="d-zl" x="500" y="506" text-anchor="end">127.0.0.1에만 열림</text>
+
+  <!-- 브라우저 -->
+  <g class="d-node ext">
+    <rect x="260" y="12" width="160" height="44" rx="8"/>
+    <text class="d-t" x="340" y="39" text-anchor="middle">브라우저</text>
+  </g>
+
+  <!-- Caddy -->
+  <g class="d-node">
+    <rect x="250" y="122" width="180" height="52" rx="8"/>
+    <text class="d-t" x="340" y="144" text-anchor="middle">Caddy</text>
+    <text class="d-s" x="340" y="162" text-anchor="middle">HTTPS 종료 · 재시작 중 붙잡기</text>
+  </g>
+
+  <!-- 앱 -->
+  <g class="d-node main">
+    <rect x="190" y="212" width="300" height="60" rx="8"/>
+    <text class="d-t" x="340" y="237" text-anchor="middle">Spring Boot 앱</text>
+    <text class="d-s" x="340" y="257" text-anchor="middle">화면 · API · 배치 — jar 하나</text>
+  </g>
+
+  <!-- MySQL -->
+  <g class="d-node">
+    <rect x="30" y="330" width="140" height="52" rx="8"/>
+    <text class="d-t" x="100" y="352" text-anchor="middle">MySQL 8.4</text>
+    <text class="d-s" x="100" y="370" text-anchor="middle">바깥 포트 없음</text>
+  </g>
+
+  <!-- Prometheus / Grafana / Alertmanager -->
+  <g class="d-node">
+    <rect x="200" y="330" width="140" height="52" rx="8"/>
+    <text class="d-t" x="270" y="352" text-anchor="middle">Prometheus</text>
+    <text class="d-s" x="270" y="370" text-anchor="middle">지표 15일 보관</text>
+  </g>
+  <g class="d-node">
+    <rect x="380" y="330" width="100" height="52" rx="8"/>
+    <text class="d-t" x="430" y="352" text-anchor="middle">Grafana</text>
+    <text class="d-s" x="430" y="370" text-anchor="middle">대시보드</text>
+  </g>
+  <g class="d-node">
+    <rect x="200" y="430" width="140" height="48" rx="8"/>
+    <text class="d-t" x="270" y="459" text-anchor="middle">Alertmanager</text>
+  </g>
+
+  <!-- 바깥 -->
+  <g class="d-node ext">
+    <rect x="600" y="212" width="144" height="60" rx="8"/>
+    <text class="d-t" x="675" y="237" text-anchor="middle">바깥 API</text>
+    <text class="d-s" x="675" y="257" text-anchor="middle">토스·DART·SEC·Claude</text>
+  </g>
+  <g class="d-node ext">
+    <rect x="600" y="330" width="144" height="52" rx="8"/>
+    <text class="d-t" x="675" y="352" text-anchor="middle">운영자 PC</text>
+    <text class="d-s" x="675" y="370" text-anchor="middle">브라우저로 Grafana</text>
+  </g>
+  <g class="d-node ext">
+    <rect x="600" y="430" width="144" height="48" rx="8"/>
+    <text class="d-t" x="675" y="459" text-anchor="middle">텔레그램</text>
+  </g>
+
+  <!-- 연결 -->
+  <path class="d-e strong" d="M340,56 V120" marker-end="url(#arr-overview)"/>
+  <text class="d-l" x="350" y="96">HTTPS 443 · 유일한 문</text>
+
+  <path class="d-e" d="M340,174 V210" marker-end="url(#arr-overview)"/>
+  <text class="d-l" x="350" y="197">HTTP 8080</text>
+
+  <path class="d-e" d="M220,272 V300 H100 V328" marker-end="url(#arr-overview)"/>
+  <text class="d-l" x="110" y="294">JDBC 3306</text>
+
+  <path class="d-e" d="M490,242 H598" marker-end="url(#arr-overview)"/>
+  <text class="d-l" x="518" y="234" text-anchor="middle">HTTPS</text>
+
+  <path class="d-e dash" d="M290,328 V274" marker-end="url(#arr-overview)"/>
+  <text class="d-l" x="298" y="306">:8081 15초마다 긁음</text>
+
+  <path class="d-e" d="M270,382 V428" marker-end="url(#arr-overview)"/>
+  <text class="d-l" x="278" y="410">규칙이 맞으면</text>
+
+  <path class="d-e" d="M340,454 H598" marker-end="url(#arr-overview)"/>
+  <text class="d-l" x="470" y="446" text-anchor="middle">알림</text>
+
+  <path class="d-e" d="M380,356 H342" marker-end="url(#arr-overview)"/>
+  <text class="d-l" x="361" y="348" text-anchor="middle">읽음</text>
+
+  <path class="d-e dash" d="M600,356 H482" marker-end="url(#arr-overview)"/>
+  <text class="d-l" x="513" y="348" text-anchor="middle">SSH 터널</text>
+</svg>
