@@ -47,14 +47,64 @@ if (bare.length) {
     process.exit(1);
 }
 
-if (!tpl.includes("/*__NOTE_JSON__*/\"\"") || !tpl.includes("/*__META_JSON__*/{}") || !tpl.includes("/*__DIAGRAMS_JSON__*/{}")) {
+// 오른쪽 칸: html/sides.js 의 명세대로 저장소 파일에서 실제 코드를 잘라 온다
+const REPO_BLOB = "https://github.com/younggeon03/stock-portfolio/blob/main/";
+const sideSpec = require(path.join(__dirname, "..", "html", "sides.js"));
+const sides = {};
+const sideErrors = [];
+for (const [key, items] of Object.entries(sideSpec)) {
+    sides[key] = items.map(it => {
+        if (it.diagram) {
+            if (!diagrams[it.diagram]) sideErrors.push(`${key}: 없는 그림 ${it.diagram}`);
+            return { diagram: it.diagram, note: it.note };
+        }
+        if (it.code) return { title: it.title || "", code: it.code, lang: it.lang, note: it.note };
+        const file = path.join(root, it.file);
+        if (!fs.existsSync(file)) { sideErrors.push(`${key}: 없는 파일 ${it.file}`); return null; }
+        const all = fs.readFileSync(file, "utf8").replace(/\r\n/g, "\n").split("\n");
+        const start = all.findIndex(l => it.exact ? l.trim() === it.from : l.includes(it.from));
+        if (start < 0) { sideErrors.push(`${key}: ${it.file} 에서 "${it.from}" 를 못 찾음`); return null; }
+        let stop = start + (it.lines || 1);
+        if (it.to) {
+            const k = all.findIndex((l, i) => i > start && l.includes(it.to));
+            if (k < 0) { sideErrors.push(`${key}: ${it.file} 에서 끝 표시 "${it.to}" 를 못 찾음`); return null; }
+            stop = k + 1;
+        }
+        const part = all.slice(start, stop);
+        // 공통 들여쓰기를 걷어 좁은 칸에서도 읽히게 한다
+        const indent = Math.min(...part.filter(l => l.trim()).map(l => l.match(/^ */)[0].length));
+        const code = part.map(l => l.slice(indent)).join("\n").replace(/\s+$/, "");
+        const end = start + part.length;
+        return {
+            title: `${it.file.replace("src/main/java/com/mystock/portfolio/", "…/").replace("src/test/java/com/mystock/portfolio/", "test/…/").replace("src/main/resources/", "resources/")} · ${end === start + 1 ? `${end}행` : `${start + 1}–${end}행`}`,
+            href: `${REPO_BLOB}${it.file.split("/").map(encodeURIComponent).join("/")}#L${start + 1}-L${end}`,
+            code, lang: it.lang, note: it.note,
+        };
+    }).filter(Boolean);
+}
+if (sideErrors.length) {
+    console.error("오른쪽 칸 코드를 못 잘라 왔습니다 (html/sides.js 를 고치세요):\n  " + sideErrors.join("\n  "));
+    process.exit(1);
+}
+if (process.argv.includes("--sides")) {
+    // 검토용: 단락마다 잘라 온 코드의 첫 줄과 끝 줄
+    for (const [k, items] of Object.entries(sides)) for (const s of items) {
+        if (s.diagram) { console.log(`${k}  [그림 ${s.diagram}]`); continue; }
+        const ls = s.code.split("\n");
+        console.log(`${k}  ${s.title}\n      ┌ ${ls[0]}\n      └ ${ls[ls.length - 1]}`);
+    }
+    process.exit(0);
+}
+
+if (!tpl.includes("/*__NOTE_JSON__*/\"\"") || !tpl.includes("/*__META_JSON__*/{}") || !tpl.includes("/*__DIAGRAMS_JSON__*/{}") || !tpl.includes("/*__SIDES_JSON__*/{}")) {
     console.error("템플릿에 자리표시가 없습니다: html/template.html");
     process.exit(1);
 }
 const html = tpl
     .replace("/*__NOTE_JSON__*/\"\"", () => safe(md))
     .replace("/*__META_JSON__*/{}", () => safe({ commit, built }))
-    .replace("/*__DIAGRAMS_JSON__*/{}", () => safe(diagrams));
+    .replace("/*__DIAGRAMS_JSON__*/{}", () => safe(diagrams))
+    .replace("/*__SIDES_JSON__*/{}", () => safe(sides));
 
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, html);
