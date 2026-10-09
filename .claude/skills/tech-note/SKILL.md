@@ -171,3 +171,14 @@ node .claude/skills/tech-note/scripts/build-html.js    # → target/tech-note/�
 저장소 절차를 따른다: 브랜치 → 커밋 → PR → CI 통과 → 스쿼시 병합. `main` 에 직접 푸시하지 않는다.
 병합한 뒤 HTML 판을 다시 만들어 같은 Artifact 에 게시한다(바닥글에 커밋 번호가 찍혀 원본과 맞는지 보인다).
 사용자에게는 **고친 장과 그 이유**, 새로 넣은 용어, 링크 검사 결과, HTML 판 링크를 짧게 보고한다.
+
+## 8. 진행 중 — 코드 에디터 모양 (2026-10-09, 사용자 확인 대기)
+
+사용자 요청: 오른쪽 칸 코드를 "인터프리터처럼" 검은 배경·문법 색·괄호 색으로, 스크롤은 페이지 하나, 오른쪽 칸은 화면 끝까지, 코드 상자는 단락 높이만큼.
+
+- 샘플(4장만)로 만들어 보여 준 상태다. 덧씌우는 파일은 `html/pending/editor.css`·`editor.js`, 샘플 만들기는 `node .claude/skills/tech-note/html/pending/make-sample.js` (빌드한 HTML 에 덧씌워 4장만 남김. 스크립트 안의 `variants/` 경로는 `html/pending/` 으로 고쳐 쓴다)
+- 정한 것: IntelliJ Darcula 계열 색(키워드 #cf8e6d, 문자열 #6aab73, 숫자 #2aacb8, 주석 #7a7e85 기울임, 애노테이션 #b3ae60), 괄호는 깊이마다 #f2c94c·#d278d6·#4fb4f0(문자열·주석 안은 칠하지 않음), 줄마다 [실제 파일 줄 번호 | 코드], 긴 줄은 접기(가로 스크롤 없음), `.shell` 최대 폭 해제, `.sec` 오른쪽 칸 `minmax(420px, 1fr)`, `align-items: stretch` 로 단락 높이만큼. **코드 블록만** 빨강·파랑 금지 규칙의 예외다
+- 빌드는 이미 `start`(실제 시작 줄 번호)를 SIDES 에 넘긴다
+- Monaco·CodeMirror 는 Artifact 가 바깥 스타일시트를 막아 쓰지 않는다. 같은 겉모습을 직접 만든다
+- **남은 결정**(사용자에게 물을 것): 4.4 처럼 코드가 본문보다 길어 본문 아래가 비는 단락을 ① 그대로 둘지 ② 핵심 줄 위주로 줄일지
+- 확인을 받으면: `pending/editor.css` 를 template.html `<style>` 에 합치고(옛 `.ref pre`·회색 `.hljs-*` 규칙은 지움), `editor.js` 의 `editor()`·`splitLines()`·`rainbow()` 를 `fillSide` 와 본문 코드 처리에 넣는다. 그다음 `pending/` 을 지우고 이 절을 6장 규칙으로 옮긴다. 사용자 요청대로 **일부 적용 → 확인 → 전체** 순서를 지킨다

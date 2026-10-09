@@ -78,7 +78,7 @@ for (const [key, items] of Object.entries(sideSpec)) {
         return {
             title: `${it.file.replace("src/main/java/com/mystock/portfolio/", "…/").replace("src/test/java/com/mystock/portfolio/", "test/…/").replace("src/main/resources/", "resources/")} · ${end === start + 1 ? `${end}행` : `${start + 1}–${end}행`}`,
             href: `${REPO_BLOB}${it.file.split("/").map(encodeURIComponent).join("/")}#L${start + 1}-L${end}`,
-            code, lang: it.lang, note: it.note,
+            code, lang: it.lang, note: it.note, start: start + 1,
         };
     }).filter(Boolean);
 }
