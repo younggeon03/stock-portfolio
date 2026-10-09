@@ -1,0 +1,38 @@
+/* 코드 에디터 모양(IntelliJ Darcula 계열). 코드 블록만 등락 색 규칙의 예외다(사용자 요청) */
+/* 오른쪽 칸을 화면 오른쪽 끝까지 채우고, 단락 높이만큼 늘린다. 스크롤은 페이지 하나뿐 */
+body { padding-right: 12px; }
+.shell { max-width: none; }
+.sec { grid-template-columns: minmax(0, var(--measure)) minmax(420px, 1fr); align-items: stretch; }
+.sec-side { position: static; max-height: none; overflow: visible; display: flex; flex-direction: column; gap: var(--s-4); padding-bottom: 0; }
+.ref { display: flex; flex-direction: column; flex: 1 1 auto; border-color: #393b40; }
+.ref .ed { flex: 1 1 auto; border-radius: 0; }
+.ref-n { background: var(--bg-raised); }
+.ed { display: flex; flex-direction: column; background: #1e1f22; border-radius: 8px; color: #bcbec4; }
+.ed-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 12px; background: #2b2d30; border-bottom: 1px solid #393b40; font: 400 12px/1.4 var(--font-mono); color: #9da0a8; }
+.ed-bar a { color: #ced0d6; text-decoration: none; overflow-wrap: anywhere; }
+.ed-bar a:hover { text-decoration: underline; }
+.ed-bar .ed-lang { flex: none; padding: 1px 7px; border: 1px solid #43454a; border-radius: 4px; color: #9da0a8; font-size: 11px; }
+/* 줄마다 [번호 | 코드]. 긴 줄은 접고(soft wrap) 번호는 첫머리에 남는다 */
+.ed-lines { flex: 1 1 auto; padding: 10px 0 14px; font: 400 12.5px/1.7 var(--font-mono); background: linear-gradient(to right, transparent calc(3.6em - 1px), #393b40 calc(3.6em - 1px), #393b40 3.6em, transparent 3.6em); }
+.ln { display: grid; grid-template-columns: 3.6em minmax(0, 1fr); }
+.ln:hover { background-color: #26282e; }
+.ln .n { color: #5c6066; text-align: right; padding-right: 12px; user-select: none; }
+.ln .c { padding: 0 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.doc > .ed { margin: 0 0 var(--s-5); }
+/* 문법 색 */
+.ed .hljs-keyword, .ed .hljs-literal, .ed .hljs-selector-tag { color: #cf8e6d; font-weight: 400; }
+.ed .hljs-built_in, .ed .hljs-type, .ed .hljs-title.class_ { color: #bcbec4; font-weight: 400; }
+.ed .hljs-string, .ed .hljs-regexp { color: #6aab73; }
+.ed .hljs-number { color: #2aacb8; }
+.ed .hljs-comment, .ed .hljs-quote { color: #7a7e85; font-style: italic; }
+.ed .hljs-doctag { color: #67a37c; font-style: italic; }
+.ed .hljs-meta, .ed .hljs-annotation { color: #b3ae60; font-style: normal; font-weight: 400; }
+.ed .hljs-title.function_, .ed .hljs-title { color: #56a8f5; }
+.ed .hljs-attr, .ed .hljs-property, .ed .hljs-name, .ed .hljs-attribute { color: #c77dbb; }
+.ed .hljs-variable, .ed .hljs-template-variable, .ed .hljs-params { color: #bcbec4; }
+.ed .hljs-section, .ed .hljs-bullet { color: #cf8e6d; }
+/* 괄호: 중첩 깊이마다 색이 바뀐다 */
+.ed .br0 { color: #f2c94c; }
+.ed .br1 { color: #d278d6; }
+.ed .br2 { color: #4fb4f0; }
+@media (max-width: 1280px) { .sec { grid-template-columns: minmax(0, 1fr); } body { padding-right: 28px; } }
