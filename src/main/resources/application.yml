@@ -171,6 +171,14 @@ snapshot:
   # 비우면 증권사 보유만 찍는다. 배치에는 브라우저가 없어서 누구의 직접 입력인지 알 수 없다
   owner-key: ${SNAPSHOT_OWNER_KEY:}
 
+# 공시 재무 야간 배치 (FilingPrefetchService). 보유·분석해 둔 종목의 공시 재무를 새벽에 미리 받아 둔다.
+# 13F(07:00) 보다 앞. 직접 입력한 종목의 식별값은 위 스냅샷 것을 같이 쓴다
+filing:
+  prefetch:
+    cron: "0 0 6 * * *"
+    # 종목 사이에 쉬는 시간. 공시처·토스 호출 한도 배려
+    pause-ms: 500
+
 # 이 앱의 바깥 주소. 피드·알림 글 속 링크에 쓴다. 서버에서는 https://도메인
 app:
   base-url: ${APP_BASE_URL:http://localhost:8080}

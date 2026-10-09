@@ -88,10 +88,7 @@ public class FilingService {
             }
         }
 
-        // 주가 없이 받는다. 주가는 읽을 때마다 붙인다
-        Optional<CompanyFinancials> fetched = "KR".equals(country)
-                ? dart.find(symbol, shares, null)
-                : edgar.find(symbol, shares, null);
+        Optional<CompanyFinancials> fetched = fetch(symbol, country, shares);
         if (fetched.isPresent()) {
             CompanyFinancials f = withHistory(symbol, fetched.get());
             save(symbol, country, f, LocalDateTime.now());
@@ -104,15 +101,63 @@ public class FilingService {
         return Optional.empty();
     }
 
-    private void save(String symbol, String country, CompanyFinancials f, LocalDateTime fetchedAt) {
+    /** 야간 배치가 종목 하나를 미리 받은 결과 */
+    public enum Prefetch {
+        /** 새로 받아 저장했다 */
+        REFRESHED,
+        /** 새로 받지 못해 저장본을 그대로 뒀다 */
+        KEPT_OLD,
+        /** 공시처에 없고 저장본도 없다 (상장 직후, 매핑에 없는 종목) */
+        NOT_FOUND,
+        /** ETF 이거나 한국·미국 종목이 아니라 공시 재무가 없다 */
+        NOT_APPLICABLE
+    }
+
+    /**
+     * 신선도와 상관없이 공시처에서 다시 받아 저장한다. 야간 배치가 쓴다.
+     *
+     * 낮에 분석 버튼을 누를 때 공시처(DART 는 보고서마다 여러 번)·과거 종가를 부르지 않고
+     * 저장본을 바로 읽게 하려는 것이다. 받기가 실패하면 저장본을 지우지 않는다. 묵은 재무가 없는 재무보다 낫다.
+     *
+     * @param shares 지금 발행주식수. 부르는 쪽이 토스에서 받아 넘긴다. 없으면 주당 지표가 빈 채로 저장되므로
+     *               배치는 주식수를 못 받은 종목을 아예 부르지 않는다
+     */
+    public Prefetch refresh(String symbol, String marketCountry, boolean fund, BigDecimal shares) {
+        if (fund || !("KR".equals(marketCountry) || "US".equals(marketCountry))) {
+            return Prefetch.NOT_APPLICABLE;
+        }
+        Optional<CompanyFinancials> fetched = fetch(symbol, marketCountry, shares);
+        if (fetched.isPresent()
+                && save(symbol, marketCountry, withHistory(symbol, fetched.get()), LocalDateTime.now())) {
+            return Prefetch.REFRESHED;
+        }
+        return store.existsById(symbol) ? Prefetch.KEPT_OLD : Prefetch.NOT_FOUND;
+    }
+
+    /** 주가 없이 받는다. 주가는 읽을 때마다 붙인다. 예외를 던지지 않는다 */
+    private Optional<CompanyFinancials> fetch(String symbol, String country, BigDecimal shares) {
+        try {
+            return "KR".equals(country)
+                    ? dart.find(symbol, shares, null)
+                    : edgar.find(symbol, shares, null);
+        } catch (Exception e) {
+            log.warn("{} 공시 재무 받기 실패: {}", symbol, e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    /** @return 저장했으면 true */
+    private boolean save(String symbol, String country, CompanyFinancials f, LocalDateTime fetchedAt) {
         try {
             StoredFinancials row = store.findById(symbol).orElseGet(() -> new StoredFinancials(symbol, country));
             // 저장본에는 주가로 잰 값(PER·PBR)을 넣지 않는다. 읽을 때 다시 잰다
             row.update(objectMapper.writeValueAsString(f.withPrice(null)), hasHistory(f), fetchedAt);
             store.save(row);
+            return true;
         } catch (Exception e) {
             // 저장이 실패해도 이번 응답은 나간다. 다음에 다시 받을 뿐이다
             log.warn("{} 공시 재무 저장 실패: {}", symbol, e.getMessage());
+            return false;
         }
     }
 
