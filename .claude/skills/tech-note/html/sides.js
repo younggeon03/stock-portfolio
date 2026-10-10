@@ -102,7 +102,7 @@ module.exports = {
     ],
     "4.3": [
         { file: J + "config/HttpClientResilienceConfig.java", from: "static final Duration CONNECT_TIMEOUT", lines: 2, lang: "java", note: "모든 RestClient에 걸리는 타임아웃. 스프링 부트 3.3 기본값에는 이것이 없다." },
-        { file: J + "config/HttpClientResilienceConfig.java", from: ".withConnectTimeout(CONNECT_TIMEOUT)", lines: 2, lang: "java", note: "주입받는 RestClient.Builder에 끼워 넣어 모든 클라이언트가 같이 쓴다." },
+        { file: J + "config/HttpClientResilienceConfig.java", from: ".setConnectTimeout(timeout(CONNECT_TIMEOUT))", lines: 2, lang: "java", note: "두 타임아웃은 커넥션 풀의 연결 설정에 들어가, 풀을 같이 쓰는 모든 RestClient에 걸린다(4.9)." },
     ],
     "4.4": [
         { file: J + "config/ResilientHttpInterceptor.java", from: "boolean retryable = HttpMethod.GET.equals", lines: 36, lang: "java", note: "GET만, 네트워크 오류와 5xx만 다시 보낸다. 다시 보내기 전에 앞 응답을 닫는다." },
@@ -118,6 +118,11 @@ module.exports = {
     ],
     "4.8": [
         { file: J + "external/anthropic/ClaudeAnalysisClient.java", from: "int cacheWriteTokens = 0;", lines: 13, lang: "java", note: "프롬프트 캐싱이 일하는지 토큰 수로 확인한다. 캐시읽기가 0이면 캐싱이 죽은 것이다." },
+    ],
+    "4.9": [
+        { file: J + "config/HttpClientResilienceConfig.java", from: "PoolingHttpClientConnectionManager pool = PoolingHttpClientConnectionManagerBuilder.create()", to: "return pool;", lang: "java", note: "모든 RestClient가 같이 쓰는 풀 하나. 크기·대기·수명·TCP_NODELAY를 여기서 정하고, 사용량을 지표로 내보낸다." },
+        { file: R + "application.yml", from: "    hikari:", to: "tcpKeepAlive: true", lang: "yaml", note: "DB에도 대기 3초·소켓 응답 60초의 상한을 둔다. 전에는 DB가 멈추면 끝없이 기다렸다." },
+        { file: R + "application.yml", from: "  tomcat:", to: "max-keep-alive-requests: 1000", lang: "yaml", note: "keep-alive 60초는 앞단 Caddy의 30초보다 길어야 한다. 반대면 간헐적인 502가 난다." },
     ],
     "5.1": [
         { file: R + "application.yml", from: "server:", lines: 14, lang: "yaml", note: "세션 12시간, 쿠키 SameSite=Strict. 운영에서는 Secure도 켠다." },

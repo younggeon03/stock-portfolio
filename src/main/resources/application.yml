@@ -12,6 +12,26 @@ server:
         http-only: true
         # HTTPS 뒤에서는 true. 내 PC(http)에서 true 면 로그인이 안 된다
         secure: ${COOKIE_SECURE:false}
+  # 들어오는 연결(Tomcat). 기본값에 맡기지 않고 작은 서버(앱 메모리 한도 900MB)에 맞춰 정한다
+  tomcat:
+    threads:
+      # 요청 하나가 스레드 하나. 바깥 API 를 기다리는 동안에도 스레드를 쥐고 있다(최대 30초).
+      # 기본 200 은 이 서버에 넘친다. k6 에서 동시 30명이 문제없었고, 넉넉히 100
+      max: 100
+      min-spare: 10
+    # 스레드가 다 차면 연결은 받아 두고 기다린다(최대 2000). 그것도 차면 커널 대기열(accept-count)에 줄을 선다.
+    # accept-count 는 커널 net.core.somaxconn 보다 클 수 없다. 리눅스 5.4 이상은 기본 4096 이라 따로 올리지 않는다
+    max-connections: 2000
+    accept-count: 100
+    # 연결만 맺고 요청을 안 보내는 클라이언트를 10초 뒤 끊는다(기본 60초)
+    connection-timeout: 10s
+    # 앞단 Caddy 가 연결을 다시 쓴다. Caddy 의 keepalive(30초)보다 길어야 Caddy 가 닫힌 연결에 요청을 싣지 않는다
+    keep-alive-timeout: 60s
+    # 기본 100번 쓰면 연결을 닫는다. Caddy 하나만 붙으므로 넉넉히
+    max-keep-alive-requests: 1000
+    # tomcat_threads_busy·tomcat_connections_current 같은 지표를 켠다. 위 숫자가 맞는지 보려면 실제 사용량이 보여야 한다
+    mbeanregistry:
+      enabled: true
 
 # 운영 상태 주소. 앱 포트(8080)와 나눠 관리 포트에만 연다.
 # 서버에서는 8080 만 바깥에 열고 8081 은 안쪽(자동 배포의 헬스체크, Prometheus)에서만 부른다.
@@ -72,6 +92,23 @@ spring:
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    # DB 연결(HikariCP 풀 + MySQL 드라이버 소켓). 바깥 API 에는 타임아웃을 걸었는데 DB 에는 없었다.
+    # DB 가 응답 없이 멈추면 쿼리가 끝없이 기다리고, 그 요청의 톰캣 스레드도 같이 묶인다
+    hikari:
+      maximum-pool-size: 10
+      # 풀이 다 쓰였을 때 빈 연결을 기다리는 상한(기본 30초). 오래 기다리기보다 빨리 실패하고 알린다
+      connection-timeout: 3000
+      validation-timeout: 2000
+      # 연결은 30분마다 새로 맺는다. MySQL 의 wait_timeout(기본 8시간)이나 중간 장비가 먼저 끊기 전에
+      max-lifetime: 1800000
+      # 5분 놀던 연결은 가볍게 확인해 살려 둔다(방화벽·NAT 가 조용히 끊는 것을 막는다)
+      keepalive-time: 300000
+      data-source-properties:
+        # TCP 연결을 맺는 데 3초, 쿼리 응답을 기다리는 데 60초. 가장 긴 쿼리(13F 저장)보다 넉넉히.
+        # 아주 오래 걸리는 마이그레이션을 새로 넣으면 이 값에 걸리니 그때 늘린다
+        connectTimeout: 3000
+        socketTimeout: 60000
+        tcpKeepAlive: true
   flyway:
     # Flyway 를 붙이기 전부터 테이블이 있던 DB(내 PC)는 V1 을 실행하지 않고 "V1 적용됨" 으로만 표시한다.
     # 빈 DB(도커·서버)는 V1 부터 실행한다

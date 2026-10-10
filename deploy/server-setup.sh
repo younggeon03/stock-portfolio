@@ -35,6 +35,21 @@ if ! swapon --show | grep -q /swapfile; then
     grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab >/dev/null
 fi
 
+# 커널 네트워크 값. 컨테이너 안에서는 못 바꾸는(네임스페이스로 나뉘지 않는) 값만 호스트에서 정한다.
+# - rmem_max·wmem_max: Caddy 의 HTTP/3(QUIC, UDP)는 큰 UDP 버퍼를 쓴다. 기본(약 200KB)이면 Caddy 가
+#   "failed to sufficiently increase receive buffer size" 경고를 내고 처리량이 떨어진다. quic-go 권장값 약 7.5MB
+# - tcp_keepalive_*: 조용히 끊긴 연결을 2시간(기본) 대신 약 10분 안에 알아챈다. 앱이 켠 SO_KEEPALIVE·
+#   JDBC tcpKeepAlive 가 이 주기를 따른다
+log "커널 네트워크 값"
+sudo tee /etc/sysctl.d/99-stock-portfolio.conf >/dev/null <<'SYSCTL'
+net.core.rmem_max = 7500000
+net.core.wmem_max = 7500000
+net.ipv4.tcp_keepalive_time = 600
+net.ipv4.tcp_keepalive_intvl = 30
+net.ipv4.tcp_keepalive_probes = 5
+SYSCTL
+sudo sysctl --system >/dev/null
+
 DIR="$HOME/stock-portfolio"
 mkdir -p "$DIR/backups"
 chmod +x "$DIR"/*.sh 2>/dev/null || true
