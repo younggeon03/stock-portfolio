@@ -133,6 +133,17 @@
         </dependency>
 
         <!--
+          바깥 API 의 HTTP 클라이언트(커넥션 풀). 버전은 스프링 부트가 관리한다.
+          이걸 넣기 전에는 RestClient 가 Anthropic SDK 를 따라 들어온 OkHttp 를 "아무도 고르지 않은 채" 쓰고 있었다
+          (스프링 부트가 HttpComponents → Jetty → OkHttp → JDK 순으로 클래스패스에서 찾는다). 풀 크기·유휴 정리·
+          소켓 옵션을 직접 정하고 Micrometer 로 풀 사용량을 보려고 명시한다(HttpClientResilienceConfig)
+        -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+        </dependency>
+
+        <!--
             서버 로그를 JSON 한 줄씩으로 찍는다(LOG_FORMAT=json 일 때만, logback-spring.xml).
             사람이 읽는 줄글은 grep 으로만 찾을 수 있지만, JSON 은 jq·로그 수집기가 필드(requestId, level)로 거른다.
             스프링 부트 3.4 부터는 내장 기능이 있지만 3.3 에는 없어서 logstash 인코더를 쓴다. 8.x 가 logback 1.5 짝이다

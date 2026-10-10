@@ -17,6 +17,13 @@
 		# 리허설에서 이걸 넣기 전에는 배포마다 13초쯤 502 가 났다
 		lb_try_duration 30s
 		lb_try_interval 500ms
+		# Caddy → 앱 연결은 다시 쓴다(keep-alive). 놀던 연결은 30초 뒤에 Caddy 가 먼저 닫는다.
+		# 앱(Tomcat)의 keep-alive-timeout(60초)보다 짧아야 한다. 반대면 Tomcat 이 막 닫은 연결에
+		# Caddy 가 요청을 실어 보내 가끔 502 가 난다(재현이 어려운 간헐 오류)
+		transport http {
+			keepalive 30s
+			keepalive_idle_conns 32
+		}
 	}
 
 	# HSTS 는 스프링 시큐리티가 https 요청에 붙인다. 여기서 또 붙이면 헤더가 두 번 나간다
