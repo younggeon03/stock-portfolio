@@ -1,0 +1,14 @@
+{
+  "note": "docs/기술노트.md",
+  "title": "기술노트",
+  "subtitle": "stock-portfolio 로 배우는 실무 기술",
+  "repoUrl": "https://github.com/younggeon03/stock-portfolio",
+  "branch": "main",
+  "out": "target/tech-note/기술노트.html",
+  "linkcheck": ["README.md", "CLAUDE.md", "docs/아키텍처.md", "docs/운영.md", "docs/로드맵.md", "docs/결정기록.md", "docs/개발일지.md", "docs/기술노트.md"],
+  "shortenPaths": {
+    "src/main/java/com/mystock/portfolio/": "…/",
+    "src/test/java/com/mystock/portfolio/": "test/…/",
+    "src/main/resources/": "resources/"
+  }
+}
