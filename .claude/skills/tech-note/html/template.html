@@ -103,35 +103,64 @@ main { min-width: 0; padding-block: var(--s-6) var(--s-7); }
 .doc { max-width: none; }
 /* 단락 밖(지도·안내·요약 상자)은 본문 폭. 장 제목의 굵은 선만 오른쪽 칸까지 넓게 */
 .doc > * { max-width: var(--measure); }
-.doc > h2 { max-width: calc(var(--measure) + var(--side) + var(--sec-gap)); }
+.doc > h2 { max-width: none; }
 .doc > .sec { max-width: none; }
-.sec { display: grid; grid-template-columns: minmax(0, var(--measure)) var(--side); gap: var(--sec-gap); align-items: start; }
+/* 오른쪽 칸은 화면 오른쪽 끝까지 채운다. 높이는 본문이 정하고(contain: size 로 칸 내용이 단락을 늘리지 못한다),
+   코드가 본문보다 길면 코드 상자 안에서 내려 본다. 짧으면 상자가 단락 높이까지 늘어난다 */
+.sec { display: grid; grid-template-columns: minmax(0, var(--measure)) minmax(var(--side), 1fr); gap: var(--sec-gap); align-items: stretch; }
 .sec-body { min-width: 0; }
 .sec-body > :first-child { margin-top: var(--s-6); }
-.sec-side { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; margin-top: var(--s-6); display: grid; gap: var(--s-4); padding-bottom: var(--s-4); }
+.sec-side { contain: size; margin: var(--s-6) 0 var(--s-5); display: flex; flex-direction: column; gap: var(--s-4); }
 .sec-side:empty { display: none; }
+@media (min-width: 1281px) { body { padding-right: 12px; } .shell { max-width: none; } }
 @media (max-width: 1280px) {
   .sec { grid-template-columns: minmax(0, 1fr); }
-  .sec-side { position: static; max-height: none; margin-top: 0; margin-bottom: var(--s-5); }
+  .sec-side { contain: none; margin-top: 0; }
+  .ref.code { flex: none; }
+  .ref.code .ed-lines { max-height: 70vh; }
   .doc > h2 { max-width: var(--measure); }
 }
-/* 오른쪽 칸의 자료 한 장: 파일 경로(원본 링크) · 코드 · 왜 보는지 */
-.ref { background: var(--bg-raised); border: 1px solid var(--rule); border-radius: var(--r-2); overflow: hidden; }
+/* 오른쪽 칸의 자료 한 장: 그림, 또는 코드 에디터(파일 탭 · 줄 번호 · 코드) + 왜 보는지 */
+.ref { flex: none; background: var(--bg-raised); border: 1px solid var(--rule); border-radius: var(--r-2); overflow: hidden; }
 .ref-h { display: flex; justify-content: space-between; gap: var(--s-2); padding: 8px 12px; background: var(--bg-sunken); font: 400 12px/1.4 var(--font-mono); color: var(--ink-2); }
-.ref-h a { color: var(--ink-2); text-decoration: none; overflow-wrap: anywhere; }
-.ref-h a:hover { color: var(--ink); text-decoration: underline; }
-.ref-h .kind { flex: none; color: var(--ink-3); font-family: var(--font-sans); }
-.doc .ref pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; border: 0; border-radius: 0; padding: 12px; background: var(--bg-raised); max-height: 460px; overflow: auto; }
-.doc .ref pre code { white-space: pre-wrap; font-size: 12.5px; line-height: 1.55; }
 .doc .ref .fig { margin: 0; border: 0; border-radius: 0; padding: 12px; }
 .ref .fig figcaption, .ref .fig details { display: none; }
-.ref-n { margin: 0; padding: 10px 12px 12px; font-size: 13.5px; line-height: 1.65; color: var(--ink-2); border-top: 1px solid var(--rule); }
-/* 문법 강조: 색은 쓰지 않는다(빨강·파랑은 등락 전용). 굵기와 회색 단계로만 */
-.hljs-keyword, .hljs-built_in, .hljs-type, .hljs-selector-tag, .hljs-section, .hljs-meta .hljs-keyword { color: var(--ink); font-weight: 700; }
-.hljs-title, .hljs-title.function_, .hljs-attr, .hljs-name, .hljs-property { color: var(--ink); }
-.hljs-string, .hljs-number, .hljs-literal, .hljs-symbol { color: var(--ink-2); }
-.hljs-comment, .hljs-quote, .hljs-meta { color: var(--ink-3); font-style: italic; }
-.hljs-annotation, .hljs-meta.hljs-keyword, .hljs-doctag { color: var(--ink-2); font-weight: 600; }
+.ref-n { flex: none; margin: 0; padding: 10px 12px 12px; font-size: 13.5px; line-height: 1.65; color: var(--ink-2); background: var(--bg-raised); border-top: 1px solid var(--rule); }
+/* 코드 카드는 남는 높이를 나눠 갖고, 모자라면 함께 줄어든다(최소 높이는 sizeSides 가 정한다) */
+.ref.code { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; border-color: #393b40; }
+.ref.code .ed { flex: 1 1 auto; min-height: 0; border-radius: 0; }
+.ref.code .ed-lines { min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #4e5157 transparent; }
+
+/* 코드 에디터 모양(IntelliJ Darcula 계열). 코드 블록만 "색은 등락 전용" 규칙의 예외다(사용자 요청, 2026-10) */
+.ed { display: flex; flex-direction: column; background: #1e1f22; border-radius: 8px; color: #bcbec4; }
+.ed-bar { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 12px; background: #2b2d30; border-bottom: 1px solid #393b40; font: 400 12px/1.4 var(--font-mono); color: #9da0a8; }
+.doc .ed-bar a { color: #ced0d6; text-decoration: none; overflow-wrap: anywhere; }
+.doc .ed-bar a:hover { text-decoration: underline; text-decoration-color: #ced0d6; }
+.doc .ed-bar a:focus-visible { outline-color: #ced0d6; }
+.ed-bar .ed-lang { flex: none; padding: 1px 7px; border: 1px solid #43454a; border-radius: 4px; color: #9da0a8; font-size: 11px; }
+/* 줄마다 [번호 | 코드]. 긴 줄은 접고(soft wrap) 번호는 첫머리에 남는다. 가로 스크롤은 없다 */
+.ed-lines { flex: 1 1 auto; padding: 10px 0 14px; font: 400 12.5px/1.7 var(--font-mono); background: linear-gradient(to right, transparent calc(3.6em - 1px), #393b40 calc(3.6em - 1px), #393b40 3.6em, transparent 3.6em); }
+.ln { display: grid; grid-template-columns: 3.6em minmax(0, 1fr); }
+.ln:hover { background-color: #26282e; }
+.ln .n { color: #5c6066; text-align: right; padding-right: 12px; user-select: none; }
+.ln .c { padding: 0 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.doc .ed { margin: 0 0 var(--s-5); }
+.doc .ref .ed { margin: 0; }
+.ed .hljs-keyword, .ed .hljs-literal, .ed .hljs-selector-tag { color: #cf8e6d; }
+.ed .hljs-built_in, .ed .hljs-type, .ed .hljs-title.class_ { color: #bcbec4; }
+.ed .hljs-string, .ed .hljs-regexp { color: #6aab73; }
+.ed .hljs-number { color: #2aacb8; }
+.ed .hljs-comment, .ed .hljs-quote { color: #7a7e85; font-style: italic; }
+.ed .hljs-doctag { color: #67a37c; font-style: italic; }
+.ed .hljs-meta, .ed .hljs-annotation { color: #b3ae60; }
+.ed .hljs-title.function_, .ed .hljs-title { color: #56a8f5; }
+.ed .hljs-attr, .ed .hljs-property, .ed .hljs-name, .ed .hljs-attribute { color: #c77dbb; }
+.ed .hljs-variable, .ed .hljs-template-variable, .ed .hljs-params { color: #bcbec4; }
+.ed .hljs-section, .ed .hljs-bullet { color: #cf8e6d; }
+/* 괄호: 중첩 깊이마다 색이 바뀐다 */
+.ed .br0 { color: #f2c94c; }
+.ed .br1 { color: #d278d6; }
+.ed .br2 { color: #4fb4f0; }
 .doc > :first-child { margin-top: 0; }
 .doc h1 { font: 700 34px/1.3 var(--font-serif); color: var(--ink); letter-spacing: -0.02em; margin: 0 0 var(--s-4); text-wrap: balance; }
 .doc h2 {
@@ -293,10 +322,15 @@ function render() {
     if (m) c.parentElement.classList.add("lang-" + m[1]);
   });
   placeDiagrams();
+  editBodyCode();
   styleCallouts();
   fixLinks();
   buildSections();
   markGlossTables();
+  sizeSides();
+  if (document.fonts) document.fonts.ready.then(sizeSides);
+  let t;
+  window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(sizeSides, 150); });
 }
 
 // <!-- diagram: 이름 | 설명 --> 표시를 찾아 바로 뒤의 글자 그림(pre)을 SVG 그림으로 바꾼다.
@@ -351,23 +385,101 @@ function fillSide(side, key) {
       fig.innerHTML = (DIAGRAMS[it.diagram] || "").replace(/arr-([\w-]+)/g, `arr-$1-s${++figCount}`);
       card.append(head, fig);
     } else {
-      const a = document.createElement(it.href ? "a" : "span");
-      a.textContent = it.title;
-      if (it.href) { a.href = it.href; a.target = "_blank"; a.rel = "noopener"; }
-      const kind = document.createElement("span"); kind.className = "kind"; kind.textContent = it.href ? "실제 코드" : "예시";
-      head.append(a, kind);
-      const pre = document.createElement("pre"); const code = document.createElement("code");
-      code.textContent = it.code;
-      if (it.lang) code.className = "language-" + it.lang;
-      pre.append(code);
-      if (window.hljs && it.lang && hljs.getLanguage(it.lang)) {
-        try { hljs.highlightElement(code); } catch (e) { /* 강조가 실패해도 글자는 그대로 보인다 */ }
-      }
-      card.append(head, pre);
+      card.classList.add("code");
+      card.append(editor(it.code, it.lang, { title: it.title, href: it.href, start: it.start, kind: it.href ? "실제 코드" : "예시" }));
     }
     if (it.note) { const n = document.createElement("p"); n.className = "ref-n"; n.textContent = it.note; card.append(n); }
     side.append(card);
   }
+}
+
+// 오른쪽 칸 높이는 본문이 정한다(.sec-side 의 contain: size). 본문이 아주 짧으면 그림이 잘리고 코드가 몇 줄만 보이니,
+// 칸의 최소 높이(그림 전체 + 코드 카드마다 몇 줄)를 재서 그만큼은 단락을 늘린다. 화면 폭이 바뀌면 다시 잰다
+const CODE_MIN_PX = 168;
+function sizeSides() {
+  const wide = matchMedia("(min-width: 1281px)").matches;
+  doc.querySelectorAll(".sec-side").forEach(side => {
+    const cards = [...side.children];
+    cards.forEach(c => { c.style.minHeight = ""; });
+    side.style.minHeight = "";
+    if (!wide || !cards.length) return;
+    let need = 0;
+    for (const c of cards) {
+      const lines = c.querySelector(".ed-lines");
+      if (!lines) { need += c.offsetHeight; continue; }
+      const own = c.offsetHeight - lines.clientHeight + Math.min(lines.scrollHeight, CODE_MIN_PX);
+      c.style.minHeight = own + "px";
+      need += own;
+    }
+    side.style.minHeight = need + 16 * (cards.length - 1) + "px";
+  });
+}
+
+// ── 코드 에디터 모양: 파일 탭 · 줄 번호(실제 파일의 줄) · 문법 색 · 깊이별 괄호 색 ──
+const OPEN_BR = "([{", CLOSE_BR = ")]}";
+// 강조된 HTML 을 줄로 나눈다. 여러 줄에 걸친 <span>(주석 등)은 줄 끝에서 닫고 다음 줄에서 다시 연다
+function splitLines(html) {
+  const out = []; let cur = ""; const stack = [];
+  const re = /(<span[^>]*>)|(<\/span>)|(\n)|([^<\n]+)/g; let m;
+  while ((m = re.exec(html))) {
+    if (m[1]) { stack.push(m[1]); cur += m[1]; }
+    else if (m[2]) { stack.pop(); cur += m[2]; }
+    else if (m[3]) { cur += "</span>".repeat(stack.length); out.push(cur); cur = stack.join(""); }
+    else cur += m[0];
+  }
+  out.push(cur);
+  return out;
+}
+// 괄호에 중첩 깊이 색을 입힌다. 문자열·주석 안의 괄호는 코드가 아니라 건너뛴다
+function rainbow(root) {
+  let depth = 0;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (w.nextNode()) nodes.push(w.currentNode);
+  for (const n of nodes) {
+    if (n.parentElement.closest(".n, .hljs-string, .hljs-comment, .hljs-regexp, .hljs-quote, .hljs-doctag")) continue;
+    if (!/[()[\]{}]/.test(n.data)) continue;
+    const frag = document.createDocumentFragment(); let buf = "";
+    for (const ch of n.data) {
+      const o = OPEN_BR.includes(ch), c = CLOSE_BR.includes(ch);
+      if (!o && !c) { buf += ch; continue; }
+      if (buf) { frag.append(buf); buf = ""; }
+      if (c) depth = Math.max(0, depth - 1);
+      const s = document.createElement("span"); s.className = "br" + (depth % 3); s.textContent = ch; frag.append(s);
+      if (o) depth++;
+    }
+    if (buf) frag.append(buf);
+    n.replaceWith(frag);
+  }
+}
+const escHtml = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+function editor(text, lang, opts) {
+  const ed = document.createElement("div"); ed.className = "ed";
+  const bar = document.createElement("div"); bar.className = "ed-bar";
+  const name = document.createElement(opts.href ? "a" : "span");
+  name.textContent = opts.title || "";
+  if (opts.href) { name.href = opts.href; name.target = "_blank"; name.rel = "noopener"; }
+  const tag = document.createElement("span"); tag.className = "ed-lang"; tag.textContent = opts.kind || lang || "";
+  bar.append(name, tag);
+  let html = escHtml(text);
+  if (lang && window.hljs && hljs.getLanguage(lang)) {
+    try { html = hljs.highlight(text, { language: lang, ignoreIllegals: true }).value; } catch (e) { /* 강조 없이 글자만 */ }
+  }
+  const lines = document.createElement("div"); lines.className = "ed-lines";
+  const start = opts.start || 1;
+  lines.innerHTML = splitLines(html).map((l, i) =>
+    '<div class="ln"><span class="n">' + (start + i) + '</span><span class="c">' + l + '</span></div>').join("");
+  rainbow(lines);
+  ed.append(bar, lines);
+  return ed;
+}
+// 본문의 코드 블록도 같은 모양으로. 글자 그림(```text)은 한글 두 칸 폭이 맞아야 해서 그대로 둔다
+function editBodyCode() {
+  doc.querySelectorAll("pre > code[class*='language-']").forEach(code => {
+    const lang = (code.className.match(/language-(\w+)/) || [])[1];
+    if (!lang || lang === "text" || code.closest(".fig")) return;
+    code.parentElement.replaceWith(editor(code.textContent.replace(/\n$/, ""), lang, { title: "예시 코드", kind: lang }));
+  });
 }
 
 let figCount = 0;
