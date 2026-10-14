@@ -1,5 +1,5 @@
 // 기술노트·아키텍처에 적힌 숫자가 코드와 맞는지 볼 "현재 사실" 을 뽑는다. 문서를 고치기 전에 이것부터 돌린다.
-// 사용: node .claude/skills/tech-note/scripts/facts.js   (저장소 루트에서)
+// 사용: node .tech-note/facts.js   (저장소 루트에서). tech-note 스킬이 노트를 고치기 전에 이것부터 돌린다
 const fs = require("fs"), path = require("path");
 const root = process.argv[2] || process.cwd();
 const read = p => fs.readFileSync(path.join(root, p), "utf8");
