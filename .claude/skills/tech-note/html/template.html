@@ -106,7 +106,7 @@ main { min-width: 0; padding-block: var(--s-6) var(--s-7); }
 .doc > h2 { max-width: none; }
 .doc > .sec { max-width: none; }
 /* 오른쪽 칸은 화면 오른쪽 끝까지 채운다. 높이는 본문이 정하고(contain: size 로 칸 내용이 단락을 늘리지 못한다),
-   코드가 본문보다 길면 코드 상자 안에서 내려 본다. 짧으면 상자가 단락 높이까지 늘어난다 */
+   코드가 본문보다 길면 코드 상자 안에서 내려 본다. 짧으면 코드가 끝나는 곳에서 상자도 끝난다 */
 .sec { display: grid; grid-template-columns: minmax(0, var(--measure)) minmax(var(--side), 1fr); gap: var(--sec-gap); align-items: stretch; }
 .sec-body { min-width: 0; }
 .sec-body > :first-child { margin-top: var(--s-6); }
@@ -125,10 +125,10 @@ main { min-width: 0; padding-block: var(--s-6) var(--s-7); }
 .ref-h { display: flex; justify-content: space-between; gap: var(--s-2); padding: 8px 12px; background: var(--bg-sunken); font: 400 12px/1.4 var(--font-mono); color: var(--ink-2); }
 .doc .ref .fig { margin: 0; border: 0; border-radius: 0; padding: 12px; }
 .ref .fig figcaption, .ref .fig details { display: none; }
-.ref-n { flex: none; margin: 0; padding: 10px 12px 12px; font-size: 13.5px; line-height: 1.65; color: var(--ink-2); background: var(--bg-raised); border-top: 1px solid var(--rule); }
-/* 코드 카드는 남는 높이를 나눠 갖고, 모자라면 함께 줄어든다(최소 높이는 sizeSides 가 정한다) */
-.ref.code { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; border-color: #393b40; }
-.ref.code .ed { flex: 1 1 auto; min-height: 0; border-radius: 0; }
+.doc .ref-n { flex: none; margin: 0; padding: 10px 12px 12px; font-size: 13.5px; line-height: 1.65; color: var(--ink-2); background: var(--bg-raised); border-top: 1px solid var(--rule); }
+/* 코드 카드는 코드 길이만큼만. 본문보다 길면 함께 줄어들어 상자 안에서 내린다(최소 높이는 sizeSides 가 정한다) */
+.ref.code { display: flex; flex-direction: column; flex: 0 1 auto; min-height: 0; border-color: #393b40; }
+.ref.code .ed { flex: 0 1 auto; min-height: 0; border-radius: 0; }
 .ref.code .ed-lines { min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #4e5157 transparent; }
 
 /* 코드 에디터 모양(IntelliJ Darcula 계열). 코드 블록만 "색은 등락 전용" 규칙의 예외다(사용자 요청, 2026-10) */
@@ -139,7 +139,7 @@ main { min-width: 0; padding-block: var(--s-6) var(--s-7); }
 .doc .ed-bar a:focus-visible { outline-color: #ced0d6; }
 .ed-bar .ed-lang { flex: none; padding: 1px 7px; border: 1px solid #43454a; border-radius: 4px; color: #9da0a8; font-size: 11px; }
 /* 줄마다 [번호 | 코드]. 긴 줄은 접고(soft wrap) 번호는 첫머리에 남는다. 가로 스크롤은 없다 */
-.ed-lines { flex: 1 1 auto; padding: 10px 0 14px; font: 400 12.5px/1.7 var(--font-mono); background: linear-gradient(to right, transparent calc(3.6em - 1px), #393b40 calc(3.6em - 1px), #393b40 3.6em, transparent 3.6em); }
+.ed-lines { flex: 0 1 auto; padding: 10px 0 14px; font: 400 12.5px/1.7 var(--font-mono); background: linear-gradient(to right, transparent calc(3.6em - 1px), #393b40 calc(3.6em - 1px), #393b40 3.6em, transparent 3.6em); }
 .ln { display: grid; grid-template-columns: 3.6em minmax(0, 1fr); }
 .ln:hover { background-color: #26282e; }
 .ln .n { color: #5c6066; text-align: right; padding-right: 12px; user-select: none; }
