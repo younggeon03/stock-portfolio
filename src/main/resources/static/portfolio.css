@@ -189,6 +189,23 @@ a { color: var(--ink-2); text-underline-offset: 2px; }
 .broker-chip .bname { font-weight: 600; color: var(--ink); margin-right: 5px; }
 .broker-chip.err { color: var(--bad-ink); }
 
+/* ══════════ 올해 해외주식 양도소득 ══════════ */
+
+.gains { margin-top: var(--s-7); }
+/* 숫자 세 개를 같은 무게로 나란히. 상자를 두르지 않고 여백과 선으로만 나눈다 */
+.gains-facts {
+    display: flex; flex-wrap: wrap; gap: var(--s-3) var(--s-6);
+    padding: var(--s-3) 0; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--rule);
+}
+.gains-facts div { display: flex; flex-direction: column; gap: 2px; }
+.gains-facts b { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.gains-facts span { font-size: 11.5px; color: var(--ink-3); }
+.gains-brokers { list-style: none; margin: var(--s-3) 0 0; padding: 0; font-size: 12.5px; color: var(--ink-2); }
+.gains-brokers li { padding: 4px 0; }
+.gains-brokers .bname { font-weight: 600; color: var(--ink); margin-right: 6px; }
+.gains-brokers i { font-style: normal; color: var(--ink-3); margin-left: 6px; }
+.gains-note { display: block; font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+
 /* 운영용 원인 문구(허용 IP 등)를 접어 두는 곳. 증권사 줄과 차트 탭이 같이 쓴다 */
 details.why { display: inline-block; margin-left: 6px; color: var(--ink-2); }
 details.why summary { cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
