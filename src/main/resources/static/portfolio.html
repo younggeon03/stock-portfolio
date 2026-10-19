@@ -115,6 +115,24 @@
         변동성은 최근 60거래일 등락폭을 1년 기준으로 바꾼 값입니다. 기업분석은 클로드가 웹 검색으로 조사한 참고자료이니 출처를 확인하세요.<br>
         이 앱은 조회와 분석만 합니다. 주문은 나가지 않습니다.
     </p>
+
+    <!--
+      올해 해외주식 양도소득 (/api/tax/foreign-gains).
+      기본공제 250만 원은 사람 단위라 증권사를 합쳐야 남은 공제와 세금이 나온다. 증권사 앱은 자기 계좌만 본다.
+      토스는 주문 전체를 받아 계산해서 느리다. 표 다음에 따로 불러 화면을 붙잡지 않는다
+    -->
+    <section class="gains" aria-labelledby="gainsHead">
+        <div class="table-head">
+            <h2 id="gainsHead">올해 해외주식 양도소득</h2>
+            <span class="table-count" id="gainsMeta"></span>
+        </div>
+        <div id="gainsBody"><p class="history-note">불러오는 중...</p></div>
+        <p class="footnote">
+            참고용 계산입니다. 신고는 증권사가 주는 양도소득세 자료로 하세요.
+            기본공제 250만 원은 증권사를 합쳐 한 번이고, 세율은 22%(지방세 포함)입니다.
+            토스는 체결 내역으로 앱이 계산하고(먼저 산 것부터, 결제일 기준환율), 나무는 나무가 계산한 값(주문일 기준)을 씁니다.
+        </p>
+    </section>
     </main>
 
 </div>

@@ -181,6 +181,7 @@ async function loadAll() {
         currentItems = data.items || [];
         clearMessage();
 
+        if (currentScope === "ALL") applyConnected(data.brokers);
         renderHero(data);
         renderAlloc(currentItems);
         renderBrokers(data.brokers);
@@ -190,6 +191,7 @@ async function loadAll() {
         const symbols = currentItems.map(i => i.symbol);
         loadVolatility(symbols);
         loadAnalysisStatus(symbols);
+        if (currentScope === "ALL") loadGains();
 
     } catch (e) {
         showError("서버에 연결하지 못했습니다. 앱이 실행 중인지 확인하세요.\n" + e.message);
@@ -205,7 +207,8 @@ async function loadAll() {
  */
 function renderHero(data) {
     const cls = colorClass(data.totalProfitLossKrw);
-    const missing = (data.brokers || []).filter(b => b.error).map(b => b.brokerName);
+    // 키를 안 넣은(연결 안 한) 증권사는 빠진 게 아니다. 한 곳만 쓰는 사람에게는 그게 전체다
+    const missing = (data.brokers || []).filter(b => b.configured && b.error).map(b => b.brokerName);
     const partial = missing.length > 0;
     heroBox.innerHTML = `
         <div class="hero-total${partial ? " partial" : ""}">${withComma(data.totalValueKrw)}<span class="won">원</span></div>
@@ -369,8 +372,79 @@ function renderHistory(points) {
     historyResize.observe(historyChartHost);
 }
 
+// ── 올해 해외주식 양도소득 ──────────────────────────────
+
+const gainsBody = document.getElementById("gainsBody");
+const gainsMeta = document.getElementById("gainsMeta");
+
+/**
+ * 증권사를 합친 실현손익과 남은 기본공제.
+ * ★ 가장 앞에 "공제가 얼마 남았나" 를 둔다. 연말에 이익을 더 실현할지 정할 때 보는 숫자다.
+ * 손익 숫자에만 등락 색을 쓰고, 공제·세금은 검정이다(색은 등락 전용)
+ */
+async function loadGains() {
+    if (!gainsBody) return;
+    try {
+        const res = await apiFetch("/api/tax/foreign-gains");
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        renderGains(await res.json());
+    } catch (e) {
+        gainsMeta.textContent = "";
+        gainsBody.innerHTML = '<p class="history-note">양도소득을 불러오지 못했습니다.</p>';
+    }
+}
+
+function renderGains(v) {
+    gainsMeta.textContent = `${v.from} ~ ${v.to}`;
+    if (v.brokers.length === 0) {
+        gainsBody.innerHTML = '<p class="history-note">연결한 증권사가 없습니다.</p>';
+        return;
+    }
+    const failed = v.brokers.filter(b => b.error).map(b => b.brokerName);
+    const lines = v.brokers.map(b => b.error
+        ? `<li><span class="bname">${escapeHtml(b.brokerName)}</span> 계산 못 함 · 합계에서 빠짐
+              <details class="why"><summary>원인</summary><p>${escapeHtml(b.error)}</p></details></li>`
+        : `<li><span class="bname">${escapeHtml(b.brokerName)}</span>
+              <span class="${colorClass(b.realizedKrw)}">${withComma(b.realizedKrw)}원</span>
+              <i>매도 ${b.saleCount}건</i>
+              ${(b.notes || []).map(n => `<span class="gains-note">${escapeHtml(n)}</span>`).join("")}</li>`).join("");
+
+    gainsBody.innerHTML = `
+        <div class="gains-facts">
+            <div><b>${withComma(v.remainingDeductionKrw)}원</b><span>남은 기본공제</span></div>
+            <div><b class="${colorClass(v.realizedKrw)}">${withComma(v.realizedKrw)}원</b><span>실현손익 합계</span></div>
+            <div><b>${withComma(v.estimatedTaxKrw)}원</b><span>예상 세액 (과세표준 ${withComma(v.taxableKrw)}원)</span></div>
+        </div>
+        ${failed.length ? `<p class="hero-partial" role="status"><strong>${escapeHtml(failed.join("·"))}이 빠진 합계입니다.</strong>
+            남은 공제와 세액도 그만큼 틀립니다.</p>` : ""}
+        <ul class="gains-brokers">${lines}</ul>`;
+}
+
+/**
+ * 연결한 증권사만 보이게 한다.
+ * 한 곳만 연결했으면 그곳이 곧 전체라 "전체/토스/나무" 버튼이 필요 없고, 부제도 그 증권사 이름만 쓴다.
+ * 전체 범위로 받은 응답일 때만 판단한다(토스만 보기 같은 범위에는 다른 증권사가 안 실려 온다)
+ */
+const scopeSub = document.querySelector(".topbar .sub");
+function applyConnected(brokers) {
+    const connected = (brokers || []).filter(b => b.configured && b.broker !== "MANUAL");
+    const names = connected.map(b => b.brokerName);
+    const buttons = document.querySelectorAll(".scope");
+    buttons.forEach(btn => {
+        const b = btn.dataset.scope;
+        btn.hidden = connected.length < 2 || (b !== "ALL" && !connected.some(c => c.broker === b));
+    });
+    if (scopeSub) {
+        scopeSub.textContent = names.length >= 2 ? `${names.join("·")}을 합쳐서 봅니다`
+            : names.length === 1 ? `${names[0]} 계좌를 봅니다`
+            : "연결된 증권사가 없습니다. .env 에 키를 넣으면 붙습니다";
+    }
+}
+
 function renderBrokers(brokers) {
-    if (!brokers || brokers.length === 0) { brokersBox.innerHTML = ""; return; }
+    // 연결 안 한 증권사는 오류가 아니라 선택이다. 줄에 올리지 않는다
+    brokers = (brokers || []).filter(b => b.configured);
+    if (brokers.length === 0) { brokersBox.innerHTML = ""; return; }
 
     brokersBox.innerHTML = brokers.map(b => {
         // 원인(허용 IP 등록 방법 같은)은 고칠 때만 필요하니 접어 둔다. 평소에는 "빠졌다" 만 보이면 된다

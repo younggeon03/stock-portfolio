@@ -83,6 +83,7 @@ SOXL을 양쪽에 나눠 들고 있었습니다. 실제로 본 숫자입니다.
 | 배당 캘린더 (DART 배당결정 공시, 공개) | 동작 확인 |
 | 공개 기업분석 (공시 재무·13F·차트, 안 가진 종목은 평단가 없이 현재가만) | 동작 확인 |
 | 장 마감 스냅샷 + 증권사 합계 대사, 평가금액 추이 그래프 | 코드·테스트 완료, 실제 대사는 서버(고정 IP) 뒤에 확인 |
+| 증권사 합산 해외주식 양도소득 (남은 기본공제 250만 원, 예상 세액) | 나무 실제 확인, 토스는 테스트 완료·허용 IP 열리면 확인 |
 | 뉴스 인사이트 (버튼, 하루 한 번) | 파이프라인 검증됨, 크레딧 대기 |
 | 지금 더 담아도 되는지 판정 | 파이프라인 검증됨, 크레딧 대기 |
 | 스크린샷으로 보유종목 등록 | 파이프라인 검증됨, 크레딧 대기 |
@@ -114,7 +115,7 @@ docker compose up -d --build # 앱 + MySQL
 | 차트 | TradingView Lightweight Charts |
 | 분석 | Anthropic Java SDK, 웹검색 도구 |
 | 외부 API | 토스증권 Open API, 나무증권 NAMUH PLUG, DART OpenAPI, SEC EDGAR |
-| 테스트 | JUnit 5, AssertJ, 231개 |
+| 테스트 | JUnit 5, AssertJ, 239개 |
 | 빌드·배포 | Docker, GitHub Actions (PR 마다 테스트·커버리지·이미지 빌드, `main` 병합 시 ghcr.io 에 이미지 게시) |
 | 운영 | Actuator 헬스체크, Prometheus + Grafana(서버 안에서만, SSH 터널), 알림 11개 → Alertmanager → 텔레그램, JSON 로그 + 요청 ID, 타임아웃·재시도·서킷 브레이커, 장 마감 배치 + 대사, Flyway, 토큰 AES-GCM 암호화 |
 
