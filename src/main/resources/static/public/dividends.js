@@ -3,10 +3,27 @@
     const input = document.getElementById("input");
     const result = document.getElementById("result");
     const STORE = "dividend-input";
+    let qtyByName = new Map();   // 마지막으로 조회한 이름 → 보유 주식 수. 주소·서버로는 안 나간다
+
+    /*
+     * ★ 주소에는 종목만 싣고 보유 주식 수는 싣지 않는다.
+     * 공개 화면이라 주소가 서버 접속 로그·방문 기록·공유한 링크에 그대로 남는다. 수량은 이 브라우저(localStorage)에만 둔다.
+     * 주소로 열었을 때는 저장해 둔 입력에서 같은 종목의 수량을 찾아 붙인다. 예전 링크(종목:수량)도 그대로 열린다.
+     */
+    let saved = "";
+    try { saved = localStorage.getItem(STORE) || ""; } catch (e) { }
+    const savedQty = new Map(parseLines(saved).filter(l => l.qty).map(l => [l.name, l.qty]));
 
     const fromUrl = new URLSearchParams(location.search).get("q");
-    if (fromUrl) input.value = fromUrl.split(",").map(p => p.replace(":", " ")).join("\n");
-    else { try { input.value = localStorage.getItem(STORE) || ""; } catch (e) { } }
+    if (fromUrl) {
+        input.value = fromUrl.split(",").map(p => {
+            const [name, qty] = p.split(":");
+            const q = qty || savedQty.get(name.trim());
+            return q ? name.trim() + " " + q : name.trim();
+        }).join("\n");
+    } else {
+        input.value = saved;
+    }
 
     // 로그인한 나(또는 내 PC 개발 모드)에게만: 국내 보유 종목과 수량으로 채운다
     fetch("/api/me").then(r => r.ok ? r.json() : null).then(me => {
@@ -28,13 +45,20 @@
         return v === null || v === undefined ? "-" : Math.round(Number(v)).toLocaleString("ko-KR") + "원";
     }
 
-    async function run() {
-        const q = input.value.split(/[\n,]+/).map(l => l.trim()).filter(Boolean).map(l => {
+    /** 한 줄 = 종목코드 또는 회사 이름, 뒤에 보유 주식 수(선택). 줄바꿈과 쉼표 둘 다 받는다 */
+    function parseLines(text) {
+        return text.split(/[\n,]+/).map(l => l.trim()).filter(Boolean).map(l => {
             const m = l.match(/^(.*?)[\s:]+([\d,]+)$/);
-            return m ? m[1].trim() + ":" + m[2].replace(/,/g, "") : l;
+            return m ? { name: m[1].trim(), qty: m[2].replace(/,/g, "") } : { name: l, qty: null };
         });
-        if (q.length === 0) { result.innerHTML = '<p class="error">종목을 넣어 주세요. 예: 005930 10</p>'; return; }
-        const query = q.join(",");
+    }
+
+    async function run() {
+        const lines = parseLines(input.value);
+        if (lines.length === 0) { result.innerHTML = '<p class="error">종목을 넣어 주세요. 예: 005930 10</p>'; return; }
+        // 서버 요청 주소도 접속 로그에 남으니 종목만 보낸다. 예상 금액(주당 × 수량)은 여기서 곱한다
+        const query = lines.map(l => l.name).join(",");
+        qtyByName = new Map(lines.filter(l => l.qty).map(l => [l.name, Number(l.qty)]));
         try { localStorage.setItem(STORE, input.value); } catch (e) { }
         history.replaceState(null, "", "?q=" + encodeURIComponent(query));
         result.innerHTML = '<p class="loading">공시를 찾는 중… (처음 보는 종목은 몇 초 걸립니다)</p>';
@@ -49,6 +73,13 @@
     }
 
     function render(cal) {
+        // 응답의 stocks[].query 는 보낸 이름 그대로다. 그걸로 종목코드 → 수량을 잇고, 다가오는 배당에 예상 금액을 붙인다
+        const qtyByCode = new Map(cal.stocks.filter(s => s.stockCode && qtyByName.has(s.query))
+            .map(s => [s.stockCode, qtyByName.get(s.query)]));
+        cal.upcoming.forEach(p => {
+            const qty = qtyByCode.get(p.stockCode);
+            p.expectedAmount = qty && p.perShareCommon !== null ? Number(p.perShareCommon) * qty : null;
+        });
         const parts = [];
         const total = cal.upcoming.reduce((s, p) => s + (p.expectedAmount ? Number(p.expectedAmount) : 0), 0);
         parts.push(`<h2 id="up-title">다가오는 배당</h2>`);

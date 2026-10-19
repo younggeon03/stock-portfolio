@@ -134,6 +134,10 @@ a { color: var(--ink-2); text-underline-offset: 2px; }
     display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline;
 }
 .hero-sub .sep { color: var(--rule-2); }
+/* 한 증권사가 빠진 총액. 색은 등락 전용이라 빨강을 쓰지 않고 흐리게 + 아래 굵은 문장으로 알린다 */
+.hero-total.partial { color: var(--ink-3); }
+.hero-partial { font-size: 13px; color: var(--ink-2); margin: var(--s-2) 0 0; }
+.hero-partial strong { color: var(--ink); }
 
 /* ══════════ 비중 스트립 ══════════ */
 
@@ -184,6 +188,15 @@ a { color: var(--ink-2); text-underline-offset: 2px; }
 }
 .broker-chip .bname { font-weight: 600; color: var(--ink); margin-right: 5px; }
 .broker-chip.err { color: var(--bad-ink); }
+
+/* 운영용 원인 문구(허용 IP 등)를 접어 두는 곳. 증권사 줄과 차트 탭이 같이 쓴다 */
+details.why { display: inline-block; margin-left: 6px; color: var(--ink-2); }
+details.why summary { cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+details.why[open] { display: block; margin: var(--s-2) 0 0; }
+details.why p {
+    margin: var(--s-1) 0 0; max-width: var(--measure); white-space: pre-line;
+    font-size: 12px; line-height: 1.6; text-align: left;
+}
 
 /* ══════════ 평가금액 추이 ══════════ */
 

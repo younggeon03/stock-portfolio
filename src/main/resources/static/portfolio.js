@@ -196,17 +196,27 @@ async function loadAll() {
     }
 }
 
-/** 총자산. 화면에서 가장 큰 숫자 하나에 나머지를 붙인다 */
+/**
+ * 총자산. 화면에서 가장 큰 숫자 하나에 나머지를 붙인다
+ *
+ * ★ 한 증권사가 빠지면 총액을 흐리게 하고 바로 아래에 적는다.
+ * 빠진 채로 같은 모양의 총액을 보여주면 "한쪽 계좌만 보고 비중을 잘못 읽는" 바로 그 실수를 이 앱이 만든다.
+ * 아래 증권사 줄의 작은 오류 문구만으로는 총액이 반쪽이라는 걸 놓친다.
+ */
 function renderHero(data) {
     const cls = colorClass(data.totalProfitLossKrw);
+    const missing = (data.brokers || []).filter(b => b.error).map(b => b.brokerName);
+    const partial = missing.length > 0;
     heroBox.innerHTML = `
-        <div class="hero-total">${withComma(data.totalValueKrw)}<span class="won">원</span></div>
+        <div class="hero-total${partial ? " partial" : ""}">${withComma(data.totalValueKrw)}<span class="won">원</span></div>
         <div class="hero-sub">
             <span>매입 ${withComma(data.totalPurchaseKrw)}</span>
             <span class="sep">|</span>
             <span class="${cls}">손익 ${withComma(data.totalProfitLossKrw)}</span>
             <span class="${cls}">${formatRate(data.totalProfitRatePercent)}</span>
-        </div>`;
+        </div>
+        ${partial ? `<p class="hero-partial" role="status"><strong>${escapeHtml(missing.join("·"))}이 빠진 합계입니다.</strong>
+            연결이 안 돼 이 증권사 종목이 합계와 비중에 들어가지 않았습니다.</p>` : ""}`;
 }
 
 /**
@@ -363,9 +373,11 @@ function renderBrokers(brokers) {
     if (!brokers || brokers.length === 0) { brokersBox.innerHTML = ""; return; }
 
     brokersBox.innerHTML = brokers.map(b => {
+        // 원인(허용 IP 등록 방법 같은)은 고칠 때만 필요하니 접어 둔다. 평소에는 "빠졌다" 만 보이면 된다
         if (b.error) {
             return `<div class="broker-chip err"><span class="bname">${escapeHtml(b.brokerName)}</span>
-                    ${escapeHtml((b.error || "").split("\n")[0])}</div>`;
+                    연결 안 됨 · 합계에서 빠짐
+                    <details class="why"><summary>원인</summary><p>${escapeHtml(b.error)}</p></details></div>`;
         }
         return `<div class="broker-chip"><span class="bname">${escapeHtml(b.brokerName)}</span>
                 ${withComma(b.valueKrw)}원 · ${Number(b.weightPercent).toFixed(1)}% · ${b.itemCount}종목</div>`;
@@ -764,10 +776,14 @@ async function loadChart(symbol) {
         const res = await apiFetch("/api/toss/chart?symbol=" + encodeURIComponent(symbol));
         if (symbol !== currentSymbol) return;    // 그 사이 다른 종목을 눌렀으면 버린다
 
+        // 토스 오류 문구는 IP 등록 방법까지 담은 운영용이다. 앞에는 무슨 일인지만 쓰고 원인은 접어 둔다
+        // (공개 기업분석 화면은 서버가 아예 이 문구를 감춘다. PublicChartController)
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            chartHost.innerHTML = '<div class="state err"></div>';
-            chartHost.querySelector(".state").textContent = err.error || "차트를 불러오지 못했습니다.";
+            chartHost.innerHTML = `<div class="state">시세 연결이 끊겨 차트를 그리지 못했습니다. 잠시 뒤 다시 열어 주세요.
+                ${err.error ? '<details class="why"><summary>원인</summary><p></p></details>' : ""}</div>`;
+            const why = chartHost.querySelector(".why p");
+            if (why) why.textContent = err.error;
             return;
         }
 
